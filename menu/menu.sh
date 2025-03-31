@@ -14,12 +14,12 @@ ISP=$(cat /etc/xray/isp)
 CITY=$(cat /etc/xray/city)
 author=$(cat /etc/profil)
 DATE2=$(date -R | cut -d " " -f -5)
-Exp2=$(curl -sS https://raw.githubusercontent.com/josecarlosmeza/permission/main/ip | grep $MYIP | awk '{print $3}')
+Exp2=$(curl -sS https://raw.githubusercontent.com/darnix1/permission/refs/heads/main/ip | grep $MYIP | awk '{print $3}')
 export RED='\033[0;31m'
 export GREEN='\033[0;32m'
 data_server=$(curl -v --insecure --silent https://google.com/ 2>&1 | grep Date | sed -e 's/< Date: //')
 date_list=$(date +"%Y-%m-%d" -d "$data_server")
-data_ip="https://raw.githubusercontent.com/josecarlosmeza/permission/main/ip"
+data_ip="https://raw.githubusercontent.com/darnix1/permission/refs/heads/main/ip"
 function check_and_update() {
     # Mendapatkan commit terbaru dari repository GitHub
     latest_commit=$(curl -s https://api.github.com/repos/josecarlosmeza/autoscript-vip/commits/main | grep -oP '"sha": "\K[^"]+')
