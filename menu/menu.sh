@@ -61,14 +61,14 @@ function check_and_update() {
             echo "Updating script..."
 
             # Download dan jalankan script update
-            wget -q https://raw.githubusercontent.com/josecarlosmeza/autoscript-vip/main/m-update.sh -O m-update.sh
+            wget -q https://raw.githubusercontent.com/darnix1/mx2/refs/heads/main/menu/m-update.sh -O m-update.sh
             chmod +x m-update.sh
             ./m-update.sh
 
             # Simpan commit terbaru dan timestamp ke file
             update_time=$(date +"%Y-%m-%d %H:%M:%S")
             echo "$latest_commit $update_time" > /etc/github/last_commit
-            echo "Update completed on $update_time."
+            echo "Actualización completada $update_time."
         else
             echo "Update skipped."
         fi
@@ -470,7 +470,7 @@ menu
 function updatews(){
 cd
 rm -rf *
-wget https://raw.githubusercontent.com/josecarlosmeza/autoscript-vip/main/m-update.sh
+wget https://raw.githubusercontent.com/darnix1/mx2/refs/heads/main/menu/m-update.sh
 clear
 chmod +x m-update.sh && ./m-update.sh
 }
