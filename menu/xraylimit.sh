@@ -170,7 +170,7 @@ if [ $vmessip = $ssvmess ]; then
 if [ $type = "lock" ]; then
 TEXT2="
 <code>◇━━━━━━━━━━━━━━◇</code>
-<b> ⚠️ VMESS MULTI LOGIN</b>
+<b> ⚠️ VMESS MULTIx LOGIN</b>
 <code>◇━━━━━━━━━━━━━━◇</code>
 <b>DOMAIN : ${domen} </b>
 <b>ISP : ${ISP}</b>
@@ -216,7 +216,7 @@ TEXT2="
 <b>TOTAL LOGIN IP : ${vmhas} </b>
 <b>USAGE : ${gb} </b>
 <code>◇━━━━━━━━━━━━━━◇</code>
-<b>⚠️ TIME LOGIN : IP LOGIN </b>
+<b>⚠️ TIEMPOLOGIN : IP LOGIN </b>
 <code>◇━━━━━━━━━━━━━━◇</code>
 <code>$vmhas2</code>
 <code>◇━━━━━━━━━━━━━━◇</code>
@@ -246,7 +246,7 @@ TEXT="
 <b>TOTAL LOGIN IP : ${vmhas} </b>
 <b>USAGE : ${gb} </b>
 <code>◇━━━━━━━━━━━━━━◇</code>
-<b>⚠️ TIME LOGIN : IP LOGIN </b>
+<b>⚠️ INICIO DE SESIÓN POR TIEMPO : IP LOGIN </b>
 <code>◇━━━━━━━━━━━━━━◇</code>
 <code>$vmhas2</code>
 <code>◇━━━━━━━━━━━━━━◇</code>
