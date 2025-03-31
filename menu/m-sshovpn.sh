@@ -27,7 +27,7 @@ echo -e "$COLOR1╰════════════════════�
 exit
 fi
 }
-checking_sc
+#checking_sc
 ISP=$(cat /etc/xray/isp)
 CITY=$(cat /etc/xray/city)
 author=$(cat /etc/profil)
