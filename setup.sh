@@ -762,7 +762,7 @@ if [ ! -f "/etc/log-create-user.log" ]; then
 echo "Log All Account " > /etc/log-create-user.log
 fi
 history -c
-serverV=$( curl -sS https://raw.githubusercontent.com/josecarlosmeza/autoscript-vip/main/versi  )
+serverV=$( curl -sS https://raw.githubusercontent.com/darnix1/mx2/refs/heads/main/.ver  )
 echo $serverV > /opt/.ver
 aureb=$(cat /home/re_otm)
 b=11
