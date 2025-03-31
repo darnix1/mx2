@@ -27,7 +27,7 @@ echo -e "$COLOR1╰════════════════════�
 exit
 fi
 }
-checking_sc
+#checking_sc
 function add-host(){
 fun_bar() {
 CMD[0]="$1"
