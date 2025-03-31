@@ -28,7 +28,7 @@ echo -e "$COLOR1└────────────────────�
 exit
 fi
 }
-checking_sc
+#checking_sc
 cd
 bash2=$( pgrep bash | wc -l )
 if [[ $bash2 -gt "20" ]]; then
