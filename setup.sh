@@ -694,7 +694,7 @@ clear
 echo -e "${BIBlue}╭══════════════════════════════════════════╮${NC}"
 echo -e "${BIBlue}│ ${BGCOLOR}    PROCESS INSTALLED LIMIT XRAY        ${NC}${BIBlue} │${NC}"
 echo -e "${BIBlue}╰══════════════════════════════════════════╯${NC}"
-wget https://raw.githubusercontent.com/josecarlosmeza/autoscript-vip/main/bin/limit.sh && chmod +x limit.sh && ./limit.sh
+#wget https://raw.githubusercontent.com/josecarlosmeza/autoscript-vip/main/bin/limit.sh && chmod +x limit.sh && ./limit.sh
 clear
 
 echo -e "${BIBlue}╭══════════════════════════════════════════╮${NC}"
