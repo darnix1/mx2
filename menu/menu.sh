@@ -97,7 +97,7 @@ key
 fi
 }
 clear
-checking_sc
+#checking_sc
 cd
 if [ ! -e /etc/per/id ]; then
 mkdir -p /etc/per
