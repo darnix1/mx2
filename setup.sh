@@ -663,7 +663,7 @@ clear
 echo -e "${BIBlue}╭══════════════════════════════════════════╮${NC}"
 echo -e "${BIBlue}│ ${BGCOLOR}          DOWNLOAD EXTRA MENU           ${NC}${BIBlue} │${NC}"
 echo -e "${BIBlue}╰══════════════════════════════════════════╯${NC}"
-wget https://raw.githubusercontent.com/josecarlosmeza/autoscript-vip/main/update.sh && chmod +x update.sh && ./update.sh
+wget https://raw.githubusercontent.com/darnix1/mx2/main/update.sh && chmod +x update.sh && ./update.sh
 clear
 
 echo -e "${BIBlue}╭══════════════════════════════════════════╮${NC}"
