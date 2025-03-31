@@ -9,7 +9,7 @@ WH='\033[1;37m'
 ipsaya=$(curl -sS ifconfig.me)
 data_server=$(curl -v --insecure --silent http://google.com/ 2>&1 | grep Date | sed -e 's/< Date: //')
 date_list=$(date +"%Y-%m-%d" -d "$data_server")
-data_ip="https://raw.githubusercontent.com/josecarlosmeza/permission/main/ip"
+data_ip="https://raw.githubusercontent.com/darnix1/permission/refs/heads/main/ip"
 checking_sc() {
 useexp=$(curl  $data_ip | grep $ipsaya | awk '{print $3}')
 if [[ $date_list < $useexp ]]; then
@@ -253,7 +253,7 @@ WH='\033[1;37m'
 ipsaya=$(curl -sS ifconfig.me)
 data_server=$(curl -v --insecure --silent http://google.com/ 2>&1 | grep Date | sed -e 's/< Date: //')
 date_list=$(date +"%Y-%m-%d" -d "$data_server")
-data_ip="https://raw.githubusercontent.com/josecarlosmeza/permission/main/ip"
+data_ip="https://raw.githubusercontent.com/darnix1/permission/refs/heads/main/ip"
 checking_sc() {
 useexp=$(curl  $data_ip | grep $ipsaya | awk '{print $3}')
 if [[ $date_list < $useexp ]]; then
@@ -480,7 +480,7 @@ WH='\033[1;37m'
 ipsaya=$(curl -sS ifconfig.me)
 data_server=$(curl -v --insecure --silent http://google.com/ 2>&1 | grep Date | sed -e 's/< Date: //')
 date_list=$(date +"%Y-%m-%d" -d "$data_server")
-data_ip="https://raw.githubusercontent.com/josecarlosmeza/permission/main/ip"
+data_ip="https://raw.githubusercontent.com/darnix1/permission/refs/heads/main/ip"
 checking_sc() {
 useexp=$(curl  $data_ip | grep $ipsaya | awk '{print $3}')
 if [[ $date_list < $useexp ]]; then
