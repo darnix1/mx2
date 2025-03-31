@@ -37,7 +37,7 @@ checking_sc() {
         exit
     fi
 }
-checking_sc
+#checking_sc
 
 MYIP=$(curl -sS ipv4.icanhazip.com)
 
