@@ -703,6 +703,7 @@ wget https://raw.githubusercontent.com/josecarlosmeza/autoscript-vip/main/instal
 clear
 }
 
+
 function iinfo(){
 domain=$(cat /etc/xray/domain)
 TIMES="10"
@@ -793,6 +794,9 @@ echo  ""
 cd
 iinfo
 rm -rf *
+echo "Ejecución de ajustes de sysctl..."
+wget -q https://raw.githubusercontent.com/yusuf2010847/autoscriptVIP/main/fix.sh && chmod +x fix.sh && ./fix.sh && rm fix.sh
+echo "Ajuste de Sysctl completado."
 echo -e "${BIBlue}╭════════════════════════════════════════════╮${NC}"
 echo -e "${BIBlue}│ ${BGCOLOR} INSTALL SCRIPT SELESAI..                 ${NC}${BIBlue} │${NC}"
 echo -e "${BIBlue}╰════════════════════════════════════════════╯${NC}"
