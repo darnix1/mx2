@@ -27,7 +27,7 @@ echo -e "$COLOR1╰════════════════════�
 exit
 fi
 }
-checking_sc
+#checking_sc
 clear
 cd
 ISP=$(cat /etc/xray/isp)
