@@ -99,45 +99,13 @@ apt-get --reinstall --fix-missing install -y bzip2 gzip coreutils wget screen rs
 echo "clear" >> .profile
 echo "menu" >> .profile
 
-install_ssl(){
-    if [ -f "/usr/bin/apt-get" ];then
-            isDebian=`cat /etc/issue|grep Debian`
-            if [ "$isDebian" != "" ];then
-                    apt-get install -y nginx certbot
-                    apt install -y nginx certbot
-                    sleep 3s
-            else
-                    apt-get install -y nginx certbot
-                    apt install -y nginx certbot
-                    sleep 3s
-            fi
-    else
-        yum install -y nginx certbot
-        sleep 3s
-    fi
 
-    systemctl stop nginx.service
-
-    if [ -f "/usr/bin/apt-get" ];then
-            isDebian=`cat /etc/issue|grep Debian`
-            if [ "$isDebian" != "" ];then
-                    echo "A" | certbot certonly --renew-by-default --register-unsafely-without-email --standalone -d $domain
-                    sleep 3s
-            else
-                    echo "A" | certbot certonly --renew-by-default --register-unsafely-without-email --standalone -d $domain
-                    sleep 3s
-            fi
-    else
-        echo "Y" | certbot certonly --renew-by-default --register-unsafely-without-email --standalone -d $domain
-        sleep 3s
-    fi
-}
 
 
 # install webserver
 apt -y install nginx php php-fpm php-cli php-mysql libxml-parser-perl
-rm /etc/nginx/sites-enabled/default
-rm /etc/nginx/sites-available/default
+#rm /etc/nginx/sites-enabled/default
+#rm /etc/nginx/sites-available/default
 curl https://raw.githubusercontent.com/josecarlosmeza/autoscript-vip/main/install/nginx.conf > /etc/nginx/nginx.conf
 curl https://raw.githubusercontent.com/josecarlosmeza/autoscript-vip/main/install/vps.conf > /etc/nginx/conf.d/vps.conf
 sed -i 's/listen = \/var\/run\/php-fpm.sock/listen = 127.0.0.1:9000/g' /etc/php/fpm/pool.d/www.conf
