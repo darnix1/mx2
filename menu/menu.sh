@@ -22,8 +22,8 @@ date_list=$(date +"%Y-%m-%d" -d "$data_server")
 data_ip="https://raw.githubusercontent.com/darnix1/permission/refs/heads/main/ip"
 function check_and_update() {
     # Mendapatkan commit terbaru dari repository GitHub
-    latest_commit=$(curl -s https://api.github.com/repos/josecarlosmeza/autoscript-vip/commits/main | grep -oP '"sha": "\K[^"]+')
-    commit_messages=$(curl -s https://api.github.com/repos/josecarlosmeza/autoscript-vip/commits/main | grep -oP '"message": "\K[^"]+')
+    latest_commit=$(curl -s https://api.github.com/repos/darnix1/mx2/commits/main | grep -oP '"sha": "\K[^"]+')
+    commit_messages=$(curl -s https://api.github.com/repos/darnix1/mx2/commits/main | grep -oP '"message": "\K[^"]+')
 
     # Mendapatkan commit terakhir yang disimpan di VPS
     if [ -f /etc/github/last_commit ]; then
