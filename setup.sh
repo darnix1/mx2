@@ -7,7 +7,7 @@ if [[ "1" == "1" ]]; then
 domain
 Casper2
 else
-  key2
+  #key2
   domain
   Casper2
 fi
@@ -47,7 +47,7 @@ rm -rf /etc/rmbl
 mkdir -p /etc/rmbl
 mkdir -p /etc/rmbl/theme
 mkdir -p /var/lib/ >/dev/null 2>&1
-echo "IP=" >> /var/lib/ipvps.conf
+#echo "IP=" >> /var/lib/ipvps.conf
 clear
 echo -e "${BIBlue}╭══════════════════════════════════════════╮${NC}"
 echo -e "${BIBlue}│ ${BGCOLOR}             MASUKKAN NAMA KAMU         ${NC}${BIBlue} │${NC}"
