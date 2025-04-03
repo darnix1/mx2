@@ -1,4 +1,12 @@
 #!/bin/bash
+
+[[ -e /bin/xdarnix/msg ]] && source /bin/xdarnix/msg || source <(curl -sSL https://raw.githubusercontent.com/darnix1/license/main/msg)
+
+
+
+#Termina Metodo
+######
+
 biji=`date +"%Y-%m-%d" -d "$dateFromServer"`
 MYIP=$(curl ifconfig.me)
 colornow=$(cat /etc/rmbl/theme/color.conf)
