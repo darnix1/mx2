@@ -77,25 +77,8 @@ function check_and_update() {
 }
 
 # Mulai pengecekan update di background
-auto_check_update &
-checking_sc() {
-useexp=$(curl -sS $data_ip | grep $MYIP | awk '{print $3}')
-if [[ $date_list < $useexp ]]; then
-echo -ne
-else
-systemctl stop nginx
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│${NC}${COLBG1}          ${WH}• AUTOSCRIPT PREMIUM •                 ${NC}$COLOR1│ $NC"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│            ${RED}PERMISSION DENIED !${NC}                  $COLOR1│"
-echo -e "$COLOR1│   ${yl}Your VPS${NC} $MYIP \033[0;36mHas been Banned ${NC}      $COLOR1│"
-echo -e "$COLOR1│     ${yl}Buy access permissions for scripts${NC}          $COLOR1│"
-echo -e "$COLOR1│             \033[0;32mContact Your Admin ${NC}                 $COLOR1│"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-key
-fi
-}
+auto_check_update 
+
 clear
 #checking_sc
 cd
