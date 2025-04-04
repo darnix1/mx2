@@ -28,7 +28,7 @@ wget -q -O /usr/bin/trialvmess "https://raw.githubusercontent.com/darnix1/Premiu
 wget -q -O /usr/bin/trialvless "https://raw.githubusercontent.com/darnix1/Premium/main/menu/trialtrojan.sh" && chmod +x /usr/bin/trialtrojan
 wget -q -O /usr/bin/trialtrojan "https://raw.githubusercontent.com/darnix1/Premium/main/menu/trialvless.sh" && chmod +x /usr/bin/trialvless
 wget -q -O /usr/bin/trialssh "https://raw.githubusercontent.com/darnix1/Premium/main/menu/trialssh.sh" && chmod +x /usr/bin/trialssh
-#wget -q -O /usr/bin/autocpu "https://raw.githubusercontent.com/darnix1/Premium/main/install/autocpu.sh" && chmod +x /usr/bin/autocpu
+wget -q -O /usr/bin/limiter"https://raw.githubusercontent.com/darnix1/Premium/main/install/limiter" && chmod +x /usr/bin/limiter
 wget -q -O /usr/bin/bantwidth "https://raw.githubusercontent.com/darnix1/Premium/main/install/bantwidth" && chmod +x /usr/bin/bantwidth
 echo -e " [INFO] Download File Successfully"
 sleep 2
