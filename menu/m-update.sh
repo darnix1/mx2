@@ -32,4 +32,4 @@ wget -q -O /usr/bin/trialssh "https://raw.githubusercontent.com/darnix1/Premium/
 wget -q -O /usr/bin/bantwidth "https://raw.githubusercontent.com/darnix1/Premium/main/install/bantwidth" && chmod +x /usr/bin/bantwidth
 echo -e " [INFO] Download File Successfully"
 sleep 2
-exit
+
