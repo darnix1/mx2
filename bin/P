@@ -1,11 +1,13 @@
 import os
 import re
-import time
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.box import SIMPLE
 from datetime import datetime
 
-# Colores para el menú
-COLOR1 = '\033[1;36m'
-NC = '\033[0m'
+# Inicializar Rich Console
+console = Console()
 
 # Función tim2sec (conversión de tiempo a segundos)
 def tim2sec(time_str):
@@ -37,10 +39,8 @@ def cek_vmess():
     if xrayy <= 5:
         os.system("systemctl restart xray")
 
-    print(f"{COLOR1}┌─────────────────────────────────────────────────┐{NC}")
-    print(f"{COLOR1}│{NC}             • VMESS USER ONLINE •               {COLOR1}│ {NC}")
-    print(f"{COLOR1}└─────────────────────────────────────────────────┘{NC}")
-    print(f"{COLOR1}┌─────────────────────────────────────────────────┐{NC}")
+    # Mostrar encabezado bonito
+    console.print(Panel("[bold cyan]• VMESS USER ONLINE •[/bold cyan]", style="cyan", box=SIMPLE))
 
     # Leer usuarios VMESS del archivo de configuración
     vm_users = []
@@ -62,12 +62,19 @@ def cek_vmess():
                 enu = re.sub(r"tcp://", "", anu).split(".")[0:3]
                 enu = ".".join(enu)
 
-                now = tim2sec(time.strftime("%H:%M:%S"))
+                now = tim2sec(datetime.now().strftime("%H:%M:%S"))
                 client = tim2sec(inu)
                 nowt = now - client
 
                 if nowt < 40 and (ina, enu) not in active_users:
                     active_users.add((ina, enu))
+
+    # Crear tabla para mostrar usuarios activos
+    table = Table(title="Usuarios VMESS Activos", box=SIMPLE, show_lines=True)
+    table.add_column("Usuario", style="cyan", justify="center")
+    table.add_column("IP Login", style="magenta", justify="center")
+    table.add_column("Uso de Datos", style="green", justify="center")
+    table.add_column("Límite", style="yellow", justify="center")
 
     # Mostrar información de usuarios activos
     if active_users:
@@ -83,35 +90,32 @@ def cek_vmess():
                         lim = int(limit_file.read().strip())
                     lim2 = convert(lim)
 
-                    print(f"{COLOR1}{NC} USERNAME : \033[0;33m{vmuser}")
-                    print(f"{COLOR1}{NC} IP LOGIN : \033[0;33m{vm_count}")
-                    print(f"{COLOR1}{NC} USAGE : \033[0;33m{gb}")
-                    print(f"{COLOR1}{NC} LIMIT : \033[0;33m{lim2}")
-                    print("")
+                    table.add_row(vmuser, str(vm_count), gb, lim2)
                 except FileNotFoundError:
                     pass
 
-    print(f"{COLOR1}└─────────────────────────────────────────────────┘{NC}")
-    input("Press any key to go back to the menu...")
+        # Imprimir la tabla
+        console.print(table)
+    else:
+        console.print("[bold red]No hay usuarios VMESS activos.[/bold red]")
+
+    input("\nPresiona cualquier tecla para regresar al menú...")
 
 # Menú principal
 def menu():
     while True:
         os.system("clear")
-        print(f"{COLOR1}┌─────────────────────────────────────────────────┐{NC}")
-        print(f"{COLOR1}│{NC}                 MAIN MENU                      {COLOR1}│{NC}")
-        print(f"{COLOR1}├─────────────────────────────────────────────────┤{NC}")
-        print(f"{COLOR1}│{NC} 1. Check VMESS Users Online                     {COLOR1}│{NC}")
-        print(f"{COLOR1}│{NC} 2. Exit                                         {COLOR1}│{NC}")
-        print(f"{COLOR1}└─────────────────────────────────────────────────┘{NC}")
-        choice = input("Select an option: ")
+        console.print(Panel("[bold cyan]MAIN MENU[/bold cyan]", style="cyan", box=SIMPLE))
+        console.print("[1] Verificar usuarios VMESS activos")
+        console.print("[2] Salir")
+        choice = input("\nSelecciona una opción: ")
         if choice == "1":
             cek_vmess()
         elif choice == "2":
-            print("Exiting...")
+            console.print("[bold green]Saliendo...[/bold green]")
             break
         else:
-            print("Invalid option. Please try again.")
+            console.print("[bold red]Opción inválida. Inténtalo de nuevo.[/bold red]")
             time.sleep(2)
 
 # Ejecutar el menú
