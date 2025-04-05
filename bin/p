@@ -1,119 +1,423 @@
+#!/usr/bin/env python3
 import os
-import re
-from rich.console import Console
-from rich.table import Table
-from rich.panel import Panel
-from rich.box import SIMPLE
-from datetime import datetime
+import sys
+import subprocess
+import requests
+import json
+from datetime import datetime, timedelta
 import time
+import re
+import readline  # Para mejor entrada de usuario
 
-# Inicializar Rich Console
-console = Console()
+# Configuración de colores (similar a los usados en Bash)
+class Colors:
+    RED = '\033[0;31m'
+    GREEN = '\033[0;32m'
+    YELLOW = '\033[0;33m'
+    BLUE = '\033[0;34m'
+    WHITE = '\033[1;37m'
+    CYAN = '\033[0;36m'
+    NC = '\033[0m'  # No Color
+    COLOR1 = '\033[38;5;46m'  # Verde brillante
+    COLBG1 = '\033[48;5;46m'  # Fondo verde brillante
 
-# Función tim2sec (conversión de tiempo a segundos)
-def tim2sec(time_str):
-    parts = list(map(int, time_str.split(":")))
-    seconds = 0
-    for i, part in enumerate(reversed(parts)):
-        seconds += part * (60 ** i)
-    return seconds
-
-# Función convert (conversión de bytes a KB, MB, GB)
-def convert(bytes):
-    if bytes < 1024:
-        return f"{bytes} B"
-    elif bytes < 1048576:
-        return f"{(bytes + 1023) // 1024} KB"
-    elif bytes < 1073741824:
-        return f"{(bytes + 1048575) // 1048576} MB"
-    else:
-        return f"{(bytes + 1073741823) // 1073741824} GB"
-
-# Función para leer nuevos logs
-def follow_logs(log_file_path):
-    with open(log_file_path, "r") as log_file:
-        # Moverse al final del archivo
-        log_file.seek(0, os.SEEK_END)
-        while True:
-            line = log_file.readline()
-            if not line:
-                time.sleep(0.1)  # Esperar nuevas líneas
-                continue
-            yield line
-
-# Función cek_vmess (verificación de usuarios VMESS activos)
-def cek_vmess():
-    # Limpiar pantalla
-    os.system("clear")
-
-    # Mostrar encabezado bonito
-    console.print(Panel("[bold cyan]• VMESS USER ONLINE •[/bold cyan]", style="cyan", box=SIMPLE))
-
-    # Leer usuarios VMESS del archivo de configuración
-    vm_users = []
-    with open("/etc/xray/config.json", "r") as config_file:
-        for line in config_file:
-            match = re.search(r"^#vmg\s+(\S+)", line)
-            if match:
-                vm_users.append(match.group(1))
-
-    active_users = set()
-    log_generator = follow_logs("/var/log/xray/access.log")
-
-    # Procesar nuevas líneas del archivo de registro
-    for line in log_generator:
-        for db1 in vm_users:
-            if f"email: {db1}" in line:
-                parts = line.split()
-                if len(parts) >= 7:
-                    ina, inu, anu = parts[6], parts[1], parts[2]
-                    enu = re.sub(r"tcp://", "", anu).split(".")[0:3]
-                    enu = ".".join(enu)
-
-                    now = tim2sec(datetime.now().strftime("%H:%M:%S"))
-                    client = tim2sec(inu)
-                    nowt = now - client
-
-                    if nowt < 40 and (ina, enu) not in active_users:
-                        active_users.add((ina, enu))
-
-   # Crear tabla para mostrar usuarios activos con emojis y colores dinámicos
-        table = Table(title="📊 USUARIOS VMESS ACTIVOS 📊", box=SIMPLE, show_lines=True)
-        table.add_column("👤 Usuario", style="cyan", justify="center", emoji=True)
-        table.add_column("🌐 IP Login", style="magenta", justify="center", emoji=True)
-        table.add_column("💾 Uso de Datos", style="green", justify="center", emoji=True)
-        table.add_column("🔒 Límite", style="yellow", justify="center", emoji=True)
-        
- # Mostrar información de usuarios activos
-        if active_users:
-            for vmuser in vm_users:
-                vm_count = sum(1 for user in active_users if user[0] == vmuser)
-                if vm_count > 0:
-                    try:
-                        with open(f"/etc/limit/vmess/{vmuser}", "r") as usage_file:
-                            byt = int(usage_file.read().strip())
-                        gb = convert(byt)
-
-                        with open(f"/etc/vmess/{vmuser}", "r") as limit_file:
-                            lim = int(limit_file.read().strip())
-                        lim2 = convert(lim)
-
-                        table.add_row(vmuser, str(vm_count), gb, lim2)
-                    except FileNotFoundError:
-                        pass
-
-            # Imprimir la tabla
-            console.print(table)
-        else:
-            console.print("[bold red]No hay usuarios VMESS activos.[/bold red]")
-
-        # Limpia la pantalla antes de la próxima actualización
-        time.sleep(2)
-        os.system("clear")
-
-# Ejecución continua en tiempo real
-if __name__ == "__main__":
+# Funciones de utilidad
+def run_cmd(cmd):
     try:
-        cek_vmess()
-    except KeyboardInterrupt:
-        console.print("\n[bold yellow]Deteniendo el monitoreo...[/bold yellow]")
+        result = subprocess.run(cmd, shell=True, check=True, 
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              text=True)
+        return result.stdout.strip()
+    except subprocess.CalledProcessError:
+        return ""
+
+def get_file_content(file_path):
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as f:
+            return f.read().strip()
+    return ""
+
+def write_file(file_path, content):
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    with open(file_path, 'w') as f:
+        f.write(content)
+
+def msg_bar():
+    print(f"{Colors.CYAN}в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ{Colors.NC}")
+
+def msg_tit():
+    print(f"{Colors.CYAN}в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ\033[48;5;1m\033[38;5;230m  MENU AUTO  \033[0m{Colors.CYAN}в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ{Colors.NC}")
+
+# Obtener información del sistema
+def get_system_info():
+    info = {}
+    
+    # Información básica del sistema
+    info['model'] = run_cmd("cat /etc/os-release | grep -w PRETTY_NAME | head -n1 | sed 's/=//g' | sed 's/\"//g' | sed 's/PRETTY_NAME//g'")
+    info['domain'] = get_file_content("/etc/xray/domain")
+    info['myip'] = run_cmd("curl ifconfig.me")
+    
+    # Memoria
+    mem = run_cmd("free -h | awk 'NR==2 {print $2 \" \" $3}'").split()
+    info['tram'] = mem[0] if len(mem) > 0 else "0"
+    info['uram'] = mem[1] if len(mem) > 1 else "0"
+    
+    # Ubicación
+    info['isp'] = get_file_content("/etc/xray/isp")
+    info['city'] = get_file_content("/etc/xray/city")
+    info['author'] = get_file_content("/etc/profil")
+    
+    # Fecha y expiración
+    info['date'] = run_cmd("date -R | cut -d \" \" -f -5")
+    info['today'] = datetime.now().strftime("%Y-%m-%d")
+    
+    try:
+        ip_data = requests.get("https://raw.githubusercontent.com/darnix1/permission/refs/heads/main/ip").text
+        for line in ip_data.split('\n'):
+            if info['myip'] in line:
+                info['exp2'] = line.split()[2]
+                break
+        else:
+            info['exp2'] = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+    except:
+        info['exp2'] = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+    
+    # Estado de servicios
+    info['services'] = {
+        'xray': check_service("xray"),
+        'nginx': check_service("nginx"),
+        'ws-stunnel': check_service("ws-stunnel"),
+        'noobzvpns': check_service("noobzvpns"),
+        'dropbear': check_service("dropbear"),
+        'udp-custom': check_service("udp-custom"),
+        'trojan-go': check_service("trojan-go")
+    }
+    
+    # Conteo de usuarios
+    info['user_counts'] = {
+        'ssh': count_users_ssh(),
+        'vmess': count_users_vmess(),
+        'vless': count_users_vless(),
+        'trojan': count_users_trojan(),
+        'noobz': count_users_noobz(),
+        'trojan_go': count_users_trojan_go()
+    }
+    
+    # Uptime
+    uptime = run_cmd("uptime -p").replace("up ", "")
+    info['uptime'] = uptime
+    
+    # Uso de red
+    info['network_usage'] = get_network_usage()
+    
+    return info
+
+def check_service(service):
+    status = run_cmd(f"systemctl is-active {service}")
+    if status == "active":
+        return f"{Colors.COLOR1}ON{Colors.NC}"
+    else:
+        return f"{Colors.RED}OFF{Colors.NC}"
+
+def count_users_ssh():
+    if os.path.exists("/etc/xray/ssh"):
+        with open("/etc/xray/ssh", 'r') as f:
+            return len([line for line in f.readlines() if line.startswith("### ")])
+    return 0
+
+def count_users_vmess():
+    if os.path.exists("/etc/xray/config.json"):
+        with open("/etc/xray/config.json", 'r') as f:
+            return len([line for line in f.readlines() if line.strip().startswith("#vmg ")])
+    return 0
+
+def count_users_vless():
+    if os.path.exists("/etc/xray/config.json"):
+        with open("/etc/xray/config.json", 'r') as f:
+            return len([line for line in f.readlines() if line.strip().startswith("#vlg ")])
+    return 0
+
+def count_users_trojan():
+    if os.path.exists("/etc/xray/config.json"):
+        with open("/etc/xray/config.json", 'r') as f:
+            return len([line for line in f.readlines() if line.strip().startswith("#trg ")])
+    return 0
+
+def count_users_noobz():
+    if os.path.exists("/etc/xray/noob"):
+        with open("/etc/xray/noob", 'r') as f:
+            return len([line for line in f.readlines() if line.startswith("### ")])
+    return 0
+
+def count_users_trojan_go():
+    if os.path.exists("/etc/trojan-go/trgo"):
+        with open("/etc/trojan-go/trgo", 'r') as f:
+            return len([line for line in f.readlines() if line.startswith("### ")])
+    return 0
+
+def get_network_usage():
+    usage = {
+        'today': {'rx': '0', 'rxv': '0', 'tx': '0', 'txv': '0', 'total': '0', 'totalv': '0'},
+        'month': {'rx': '0', 'rxv': '0', 'tx': '0', 'txv': '0', 'total': '0', 'totalv': '0'},
+        'yesterday': {'rx': '0', 'rxv': '0', 'tx': '0', 'txv': '0', 'total': '0', 'totalv': '0'}
+    }
+    
+    # Implementación simplificada - en realidad necesitarías analizar la salida de vnstat
+    return usage
+
+def check_and_update():
+    try:
+        # Obtener último commit de GitHub
+        response = requests.get("https://api.github.com/repos/darnix1/Premium/commits/main")
+        if response.status_code == 200:
+            data = response.json()
+            latest_commit = data.get('sha', '')
+            commit_message = data.get('commit', {}).get('message', '')
+            
+            # Obtener último commit guardado
+            last_commit = ""
+            last_update_time = "Never"
+            if os.path.exists("/etc/github/last_commit"):
+                with open("/etc/github/last_commit", 'r') as f:
+                    lines = f.readlines()
+                    if lines:
+                        last_commit = lines[0].split()[0] if len(lines[0].split()) > 0 else ""
+                        last_update_time = " ".join(lines[0].split()[1:3]) if len(lines[0].split()) > 2 else "Never"
+            
+            # Verificar si hay actualizaciones
+            if latest_commit != last_commit:
+                print(f"{Colors.CYAN}в•­в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•®{Colors.NC}")
+                print(f"{Colors.CYAN}в”‚ {Colors.WHITE}вЂў UPDATE SCRIPT AVAILABLE вЂў                             {Colors.CYAN}в”‚{Colors.NC}")
+                print(f"{Colors.CYAN}в”‚ {Colors.WHITE}Repository: jvoscript/autoscript-vip                    {Colors.CYAN}в”‚{Colors.NC}")
+                print(f"{Colors.CYAN}в”‚ {Colors.WHITE}Latest Changes:                                         {Colors.CYAN}в”‚{Colors.NC}")
+                print(f"{Colors.CYAN}в”‚ {Colors.WHITE}1. {commit_message}{Colors.NC}")
+                print(f"{Colors.CYAN}в•°в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•Ї{Colors.NC}")
+                print(f"Last update: {last_update_time}")
+                
+                update_choice = input("Do you want to update the script? (Y/N): ").strip().lower()
+                if update_choice == 'y':
+                    print("Updating script...")
+                    os.system("wget -q https://raw.githubusercontent.com/darnix1/mx2/refs/heads/main/menu/m-update.sh -O m-update.sh")
+                    os.system("chmod +x m-update.sh && ./m-update.sh")
+                    
+                    update_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    write_file("/etc/github/last_commit", f"{latest_commit} {update_time}")
+                    print(f"Actualización completada {update_time}.")
+                else:
+                    print("Update skipped.")
+    except Exception as e:
+        print(f"Error checking updates: {str(e)}")
+
+def auto_check_update():
+    # Esta función se ejecutaría en segundo plano en una implementación completa
+    pass
+
+def m_bot2():
+    clear_screen()
+    print(f"{Colors.COLOR1}в•­в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•®{Colors.NC}")
+    print(f"{Colors.COLOR1}  {Colors.WHITE}Please select a Bot type below                 {Colors.NC}")
+    print(f"{Colors.COLOR1}в•°в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•Ї{Colors.NC}")
+    print(f"{Colors.COLOR1}в•­в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•®{Colors.NC}")
+    print(f"{Colors.COLOR1}  [ 1 ] {Colors.WHITE}Buat/Edit BOT INFO Multi Login SSH, XRAY & TRANSAKSI   {Colors.NC}")
+    print(f"{Colors.COLOR1}  [ 2 ] {Colors.WHITE}Buat/Edit BOT INFO Create User & Lain Lain    {Colors.NC}")
+    print(f"")
+    print(f"{Colors.COLOR1}  [ 3 ] {Colors.WHITE}Buat/Edit BOT INFO Backup Telegram    {Colors.NC}")
+    print(f"{Colors.COLOR1}в•°в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•Ї{Colors.NC}")
+    
+    bot = input("   Please select numbers 1-3 or Any Button(Random) to exit : ").strip()
+    print("")
+    
+    if bot == "1":
+        clear_screen()
+        os.system("rm -rf /etc/perlogin")
+        os.system("mkdir -p /etc/perlogin")
+        os.chdir("/etc/perlogin")
+        os.system("touch token")
+        os.system("touch id")
+        print("")
+        print(f"{Colors.COLOR1} [ INFO ] {Colors.WHITE}Create for database Multi Login")
+        token2 = input("Enter Token (Creat on @BotFather) : ").strip()
+        write_file("/etc/perlogin/token", token2)
+        idat = input("Enter Your Id (Creat on @userinfobot)  : ").strip()
+        write_file("/etc/perlogin/id", idat)
+        time.sleep(1)
+        m_bot2()
+    elif bot == "2":
+        clear_screen()
+        os.system("rm -rf /etc/per")
+        os.system("mkdir -p /etc/per")
+        os.chdir("/etc/per")
+        os.system("touch token")
+        os.system("touch id")
+        print("")
+        print(f"{Colors.COLOR1} [ INFO ] {Colors.WHITE}Create for database Akun Dan Lain Lain")
+        token3 = input("Enter Token (Creat on @BotFather) : ").strip()
+        write_file("/etc/per/token", token3)
+        idat2 = input("Enter Your Id (Creat on @userinfobot)  : ").strip()
+        write_file("/etc/per/id", idat2)
+        time.sleep(1)
+        m_bot2()
+    elif bot == "3":
+        clear_screen()
+        os.system("rm -rf /usr/bin/token")
+        os.system("rm -rf /usr/bin/idchat")
+        print("")
+        print(f"{Colors.COLOR1} [ INFO ] {Colors.WHITE}Create for database Backup Telegram")
+        token23 = input("Enter Token (Creat on @BotFather) : ").strip()
+        write_file("/usr/bin/token", token23)
+        idchat = input("Enter Your Id (Creat on @userinfobot)  : ").strip()
+        write_file("/usr/bin/idchat", idchat)
+        time.sleep(1)
+        m_bot2()
+    else:
+        menu()
+
+def restart_service():
+    clear_screen()
+    
+    def fun_bar():
+        print("  \033[0;33mPlease Wait Loading \033[1;37m- \033[0;33m[", end="", flush=True)
+        for i in range(18):
+            print("\033[0;32m#", end="", flush=True)
+            time.sleep(0.1)
+        print("\033[0;33m]\033[1;37m -\033[1;32m OK !\033[1;37m")
+    
+    print(f"{Colors.COLOR1} в•­в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•®{Colors.NC}")
+    print(f"{Colors.COLOR1} {Colors.NC} {Colors.COLBG1}          {Colors.WHITE}RESTART SERVICE VPS             {Colors.NC} {Colors.NC}")
+    print(f"{Colors.COLOR1} в•°в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•Ї{Colors.NC}")
+    print("")
+    print("  \033[1;91m Restart All Service... \033[1;37m")
+    
+    # Simular barra de progreso
+    fun_bar()
+    
+    # Reiniciar servicios
+    services = [
+        "nginx", "trojan-go", "xray", "noobzvpns", "daemon", 
+        "udp-custom", "ws-dropbear", "ws-stunnel", "openvpn", 
+        "cron", "netfilter-persistent", "squid", "badvpn1", 
+        "badvpn2", "badvpn3", "client", "server"
+    ]
+    
+    for service in services:
+        os.system(f"systemctl restart {service}")
+    
+    print("")
+    input("Press [ Enter ] to back on menu")
+    menu()
+
+def clear_screen():
+    os.system('clear' if os.name == 'posix' else 'cls')
+
+def menu():
+    clear_screen()
+    info = get_system_info()
+    
+    # Mostrar información del sistema
+    msg_tit()
+    print(f"  {Colors.WHITE}вЂў  S.O         {Colors.GREEN}{info['model']} {Colors.RED}. {Colors.YELLOW}")
+    print(f"  {Colors.WHITE}вЂў  DOMINIO     {Colors.GREEN}{info['domain']} {Colors.RED}. {Colors.YELLOW}")
+    print(f"  {Colors.WHITE}вЂў  RAM USADO   {Colors.GREEN}{info['tram']} / {info['uram']} MB {Colors.RED}. {Colors.YELLOW}")
+    print(f"  {Colors.WHITE}вЂў  AUTOR       {Colors.GREEN}{info['author']}")
+    print(f"  {Colors.WHITE}вЂў  {get_file_content('/etc/newadm/message.txt')}")
+    
+    msg_bar()
+    
+    # Estado de servicios
+    print(f"  {Colors.WHITE}[ SSHWS : {info['services']['ws-stunnel']} {Colors.WHITE}] {Colors.WHITE}[ XRAY : {info['services']['xray']} {Colors.WHITE}] {Colors.WHITE}[ NGINX : {info['services']['nginx']} {Colors.WHITE}]")
+    
+    # Conteo de usuarios
+    akun1 = "SSHWS"
+    akun2 = "VMESS"
+    akun3 = "VLESS"
+    akun4 = "TROJAN"
+    akun01 = info['user_counts']['ssh']
+    akun02 = info['user_counts']['vmess']
+    akun03 = info['user_counts']['vless']
+    akun04 = info['user_counts']['trojan']
+    
+    print(f"{Colors.CYAN}в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ\033[100m\033[97m  CONTROL DE REGISTRO  \033[0m{Colors.CYAN}в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ{Colors.NC}")
+    print(f"{Colors.WHITE}  {akun1}:{Colors.YELLOW}[{Colors.GREEN}{akun01}{Colors.YELLOW}]{Colors.WHITE}  {akun2}:{Colors.YELLOW}[{Colors.GREEN}{akun02}{Colors.YELLOW}]{Colors.WHITE}  {akun3}:{Colors.YELLOW}[{Colors.GREEN}{akun03}{Colors.YELLOW}]{Colors.WHITE}  {akun4}:{Colors.YELLOW}[{Colors.GREEN}{akun04}{Colors.YELLOW}]{Colors.WHITE}")
+    print(f"{Colors.CYAN}в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ{Colors.NC}")
+    
+    # Opciones del menú
+    msg_bar()
+    print(f"{Colors.YELLOW}  [\033[1;32m1{Colors.YELLOW}]\033[1;31m вЂў {Colors.WHITE}SSH OPENVPN", end="")
+    print(f"   {Colors.YELLOW}  [\033[1;32m7{Colors.YELLOW}]\033[1;31m вЂў {Colors.WHITE}NOTIBOT")
+    print(f"{Colors.YELLOW}  [\033[1;32m2{Colors.YELLOW}]\033[1;31m вЂў {Colors.WHITE}XRAY/VMESS", end="")
+    print(f"    {Colors.YELLOW}  [\033[1;32m8{Colors.YELLOW}]\033[1;31m вЂў {Colors.WHITE}TEMAS")
+    print(f"{Colors.YELLOW}  [\033[1;32m3{Colors.YELLOW}]\033[1;31m вЂў {Colors.WHITE}XRAY/VLESS", end="")
+    print(f"    {Colors.YELLOW}  [\033[1;32m9{Colors.YELLOW}]\033[1;31m вЂў {Colors.WHITE}UPDATE")
+    print(f"{Colors.YELLOW}  [\033[1;32m4{Colors.YELLOW}]\033[1;31m вЂў {Colors.WHITE}TROJAN", end="")
+    print(f"        {Colors.YELLOW}  [\033[1;32m10{Colors.YELLOW}]\033[1;31m вЂў {Colors.WHITE}SISTEMA")
+    print(f"{Colors.YELLOW}  [\033[1;32m5{Colors.YELLOW}]\033[1;31m вЂў {Colors.WHITE}SERVICIOS", end="")
+    print(f"     {Colors.YELLOW}  [\033[1;32m11{Colors.YELLOW}]\033[1;31m вЂў {Colors.WHITE}BACKUP")
+    print(f"{Colors.YELLOW}  [\033[1;32m6{Colors.YELLOW}]\033[1;31m вЂў {Colors.WHITE}TELEGRAM BOT", end="")
+    print(f"  {Colors.YELLOW}  [\033[1;32m12{Colors.YELLOW}]\033[1;31m вЂў {Colors.WHITE}REINICIAR")
+    msg_bar()
+    
+    # Información de versión y expiración
+    cert_days = (datetime.strptime(info['exp2'], "%Y-%m-%d") - datetime.strptime(info['today'], "%Y-%m-%d")).days
+    sts = f"{Colors.GREEN}(Registered){Colors.NC}" if cert_days > 0 else f"{Colors.RED}[EXPIRED]{Colors.NC}"
+    
+    print(f"{Colors.COLOR1}в•­в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•®{Colors.NC}")
+    print(f"{Colors.COLOR1}в”‚{Colors.NC} {Colors.WHITE}вќ€ Versi   {Colors.NC}: {Colors.WHITE}{get_file_content('/opt/.ver')} Version{Colors.NC}")
+    print(f"{Colors.COLOR1}в”‚{Colors.NC} {Colors.WHITE}вќ€ Client {Colors.NC} : {Colors.WHITE}{info['author']}{Colors.NC}")
+    print(f"{Colors.COLOR1}в”‚{Colors.NC} {Colors.WHITE}вќ€ Durasi {Colors.NC} : {Colors.WHITE}{cert_days} hari{Colors.NC}")
+    print(f"{Colors.COLOR1}в”‚{Colors.NC} {Colors.WHITE}вќ€ Expiry {Colors.NC} : {Colors.WHITE}{info['exp2']} {sts} {Colors.NC}")
+    print(f"{Colors.COLOR1}в•°в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•Ї{Colors.NC}")
+    print("")
+    
+    # Selección de opción
+    opt = input(f" {Colors.WHITE}Selecciona una opcion{Colors.COLOR1}: {Colors.WHITE}").strip()
+    
+    # Manejo de opciones (simplificado)
+    if opt in ["01", "1"]:
+        clear_screen()
+        os.system("m-sshovpn")
+    elif opt in ["02", "2"]:
+        clear_screen()
+        os.system("m-vmess")
+    elif opt in ["03", "3"]:
+        clear_screen()
+        os.system("m-vless")
+    elif opt in ["04", "4"]:
+        clear_screen()
+        os.system("m-trojan")
+    elif opt in ["05", "5"]:
+        clear_screen()
+        os.system("running")
+    elif opt in ["06", "6"]:
+        clear_screen()
+        os.system("m-bot")
+    elif opt in ["07", "7"]:
+        clear_screen()
+        m_bot2()
+    elif opt in ["08", "8"]:
+        clear_screen()
+        os.system("m-theme")
+    elif opt in ["09", "9"]:
+        clear_screen()
+        os.system("m-update")
+    elif opt in ["10"]:
+        clear_screen()
+        os.system("m-system")
+    elif opt in ["11"]:
+        clear_screen()
+        os.system("m-backup")
+    elif opt in ["12"]:
+        clear_screen()
+        restart_service()
+    elif opt in ["00", "0"]:
+        clear_screen()
+        menu()
+    else:
+        clear_screen()
+        menu()
+
+if __name__ == "__main__":
+    # Verificar actualizaciones al inicio
+    check_and_update()
+    
+    # Iniciar menú principal
+    menu()
