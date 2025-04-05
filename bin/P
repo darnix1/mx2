@@ -29,6 +29,27 @@ def convert(bytes):
     else:
         return f"{(bytes + 1073741823) // 1073741824} GB"
 
+# Función para seguir nuevas líneas del archivo de registro
+def follow_logs(log_file_path):
+    # Obtener las últimas 100 líneas del archivo al inicio
+    try:
+        initial_lines = subprocess.check_output(["tail", "-n", "100", log_file_path]).decode().splitlines()
+        for line in initial_lines:
+            yield line
+    except FileNotFoundError:
+        console.print("[bold red]🚨 Archivo de registro no encontrado.[/bold red]")
+        return
+
+    # Seguir nuevas líneas agregadas al archivo
+    with open(log_file_path, "r") as log_file:
+        log_file.seek(0, os.SEEK_END)  # Moverse al final del archivo
+        while True:
+            line = log_file.readline()
+            if not line:
+                time.sleep(0.1)  # Esperar nuevas líneas
+                continue
+            yield line
+
 # Función para animar una barra deslizante
 def animate_bar():
     bar_length = 40  # Longitud de la barra
