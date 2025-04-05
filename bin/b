@@ -99,6 +99,6 @@ if __name__ == "__main__":
     try:
         while True:
             cek_vmess()
-            time.sleep(5)  # Espera 5 segundos antes de actualizar
+            time.sleep(2)  # Espera 5 segundos antes de actualizar
     except KeyboardInterrupt:
         console.print("\n[bold yellow]Deteniendo el monitoreo...[/bold yellow]")
