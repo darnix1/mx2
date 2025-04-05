@@ -1,0 +1,119 @@
+import os
+import re
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.box import SIMPLE
+from datetime import datetime
+import time
+
+# Inicializar Rich Console
+console = Console()
+
+# Función tim2sec (conversión de tiempo a segundos)
+def tim2sec(time_str):
+    parts = list(map(int, time_str.split(":")))
+    seconds = 0
+    for i, part in enumerate(reversed(parts)):
+        seconds += part * (60 ** i)
+    return seconds
+
+# Función convert (conversión de bytes a KB, MB, GB)
+def convert(bytes):
+    if bytes < 1024:
+        return f"{bytes} B"
+    elif bytes < 1048576:
+        return f"{(bytes + 1023) // 1024} KB"
+    elif bytes < 1073741824:
+        return f"{(bytes + 1048575) // 1048576} MB"
+    else:
+        return f"{(bytes + 1073741823) // 1073741824} GB"
+
+# Función para leer nuevos logs
+def follow_logs(log_file_path):
+    with open(log_file_path, "r") as log_file:
+        # Moverse al final del archivo
+        log_file.seek(0, os.SEEK_END)
+        while True:
+            line = log_file.readline()
+            if not line:
+                time.sleep(0.1)  # Esperar nuevas líneas
+                continue
+            yield line
+
+# Función cek_vmess (verificación de usuarios VMESS activos)
+def cek_vmess():
+    # Limpiar pantalla
+    os.system("clear")
+
+    # Mostrar encabezado bonito
+    console.print(Panel("[bold cyan]• VMESS USER ONLINE •[/bold cyan]", style="cyan", box=SIMPLE))
+
+    # Leer usuarios VMESS del archivo de configuración
+    vm_users = []
+    with open("/etc/xray/config.json", "r") as config_file:
+        for line in config_file:
+            match = re.search(r"^#vmg\s+(\S+)", line)
+            if match:
+                vm_users.append(match.group(1))
+
+    active_users = set()
+    log_generator = follow_logs("/var/log/xray/access.log")
+
+    # Procesar nuevas líneas del archivo de registro
+    for line in log_generator:
+        for db1 in vm_users:
+            if f"email: {db1}" in line:
+                parts = line.split()
+                if len(parts) >= 7:
+                    ina, inu, anu = parts[6], parts[1], parts[2]
+                    enu = re.sub(r"tcp://", "", anu).split(".")[0:3]
+                    enu = ".".join(enu)
+
+                    now = tim2sec(datetime.now().strftime("%H:%M:%S"))
+                    client = tim2sec(inu)
+                    nowt = now - client
+
+                    if nowt < 40 and (ina, enu) not in active_users:
+                        active_users.add((ina, enu))
+
+        # Crear tabla para mostrar usuarios activos
+        table = Table(title="Usuarios VMESS Activos", box=SIMPLE, show_lines=True)
+        table.add_column("Usuario", style="cyan", justify="center")
+        table.add_column("IP Login", style="magenta", justify="center")
+        table.add_column("Uso de Datos", style="green", justify="center")
+        table.add_column("Límite", style="yellow", justify="center")
+
+        # Mostrar información de usuarios activos
+        if active_users:
+            for vmuser in vm_users:
+                vm_count = sum(1 for user in active_users if user[0] == vmuser)
+                if vm_count > 0:
+                    try:
+                        with open(f"/etc/limit/vmess/{vmuser}", "r") as usage_file:
+                            byt = int(usage_file.read().strip())
+                        gb = convert(byt)
+
+                        with open(f"/etc/vmess/{vmuser}", "r") as limit_file:
+                            lim = int(limit_file.read().strip())
+                        lim2 = convert(lim)
+
+                        table.add_row(vmuser, str(vm_count), gb, lim2)
+                    except FileNotFoundError:
+                        pass
+
+            # Imprimir la tabla
+            console.print(table)
+        else:
+            console.print("[bold red]No hay usuarios VMESS activos.[/bold red]")
+
+        # Limpia la pantalla antes de la próxima actualización
+        time.sleep(5)
+        os.system("clear")
+
+# Ejecución continua en tiempo real
+if __name__ == "__main__":
+    try:
+        cek_vmess()
+    except KeyboardInterrupt:
+        console.print("\n[bold yellow]Deteniendo el monitoreo...[/bold yellow]")
