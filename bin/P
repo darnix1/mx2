@@ -29,20 +29,11 @@ def convert(bytes):
     else:
         return f"{(bytes + 1073741823) // 1073741824} GB"
 
-# Función para seguir nuevas líneas del archivo de registro
+# Función para leer nuevos logs
 def follow_logs(log_file_path):
-    # Obtener las últimas 100 líneas del archivo al inicio
-    try:
-        initial_lines = subprocess.check_output(["tail", "-n", "100", log_file_path]).decode().splitlines()
-        for line in initial_lines:
-            yield line
-    except FileNotFoundError:
-        console.print("[bold red]🚨 Archivo de registro no encontrado.[/bold red]")
-        return
-
-    # Seguir nuevas líneas agregadas al archivo
     with open(log_file_path, "r") as log_file:
-        log_file.seek(0, os.SEEK_END)  # Moverse al final del archivo
+        # Moverse al final del archivo
+        log_file.seek(0, os.SEEK_END)
         while True:
             line = log_file.readline()
             if not line:
@@ -50,43 +41,21 @@ def follow_logs(log_file_path):
                 continue
             yield line
 
-# Función para animar una barra deslizante
-def animate_bar():
-    bar_length = 40  # Longitud de la barra
-    direction = 1    # Dirección: 1 (derecha), -1 (izquierda)
-    position = 0     # Posición inicial de la barra
-
-    while True:
-        # Crear la barra con emoji 🟩 en movimiento
-        bar = "⬛" * position + "🟩" + "⬛" * (bar_length - position - 1)
-        console.print(f"[bold green]{bar}[/bold green]", end="\r")
-
-        # Actualizar posición
-        position += direction
-        if position == 0 or position == bar_length - 1:
-            direction *= -1  # Cambiar dirección
-
-        time.sleep(0.05)  # Velocidad de la animación
-
 # Función cek_vmess (verificación de usuarios VMESS activos)
 def cek_vmess():
     # Limpiar pantalla
     os.system("clear")
 
-    # Mostrar encabezado bonito con emojis
-    console.print(Panel("[bold cyan]🚀 • MONITOR DE USUARIOS VMESS • 🚀[/bold cyan]", style="cyan", box=SIMPLE))
+    # Mostrar encabezado bonito
+    console.print(Panel("[bold cyan]• VMESS USER ONLINE •[/bold cyan]", style="cyan", box=SIMPLE))
 
     # Leer usuarios VMESS del archivo de configuración
     vm_users = []
-    try:
-        with open("/etc/xray/config.json", "r") as config_file:
-            for line in config_file:
-                match = re.search(r"^#vmg\s+(\S+)", line)
-                if match:
-                    vm_users.append(match.group(1))
-    except FileNotFoundError:
-        console.print("[bold red]🚨 Archivo de configuración no encontrado.[/bold red]")
-        return
+    with open("/etc/xray/config.json", "r") as config_file:
+        for line in config_file:
+            match = re.search(r"^#vmg\s+(\S+)", line)
+            if match:
+                vm_users.append(match.group(1))
 
     active_users = set()
     log_generator = follow_logs("/var/log/xray/access.log")
@@ -108,14 +77,14 @@ def cek_vmess():
                     if nowt < 40 and (ina, enu) not in active_users:
                         active_users.add((ina, enu))
 
-        # Crear tabla para mostrar usuarios activos con emojis y colores dinámicos
+   # Crear tabla para mostrar usuarios activos con emojis y colores dinámicos
         table = Table(title="📊 USUARIOS VMESS ACTIVOS 📊", box=SIMPLE, show_lines=True)
         table.add_column("👤 Usuario", style="cyan", justify="center", emoji=True)
         table.add_column("🌐 IP Login", style="magenta", justify="center", emoji=True)
         table.add_column("💾 Uso de Datos", style="green", justify="center", emoji=True)
         table.add_column("🔒 Límite", style="yellow", justify="center", emoji=True)
-
-        # Mostrar información de usuarios activos
+        
+ # Mostrar información de usuarios activos
         if active_users:
             for vmuser in vm_users:
                 vm_count = sum(1 for user in active_users if user[0] == vmuser)
@@ -129,21 +98,17 @@ def cek_vmess():
                             lim = int(limit_file.read().strip())
                         lim2 = convert(lim)
 
-                        table.add_row(vmuser, str(vm_count), f"{gb} 📂", f"{lim2} 🔒")
+                        table.add_row(vmuser, str(vm_count), gb, lim2)
                     except FileNotFoundError:
                         pass
 
             # Imprimir la tabla
             console.print(table)
         else:
-            console.print("[bold red]🚨 No hay usuarios VMESS activos.[/bold red]")
-
-        # Animación de barra deslizante
-        console.print("\n[bold green]🔄 Actualizando datos...[/bold green]")
-        animate_bar()
+            console.print("[bold red]No hay usuarios VMESS activos.[/bold red]")
 
         # Limpia la pantalla antes de la próxima actualización
-        time.sleep(5)
+        time.sleep(2)
         os.system("clear")
 
 # Ejecución continua en tiempo real
@@ -151,4 +116,4 @@ if __name__ == "__main__":
     try:
         cek_vmess()
     except KeyboardInterrupt:
-        console.print("\n[bold yellow]👋 Deteniekdkdndo el monitoreo... ¡Hasta luego! 👋[/bold yellow]")
+        console.print("\n[bold yellow]Deteniendo el monitoreo...[/bold yellow]")
