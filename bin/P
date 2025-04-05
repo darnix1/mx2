@@ -151,4 +151,4 @@ if __name__ == "__main__":
     try:
         cek_vmess()
     except KeyboardInterrupt:
-        console.print("\n[bold yellow]👋 Deteniendo el monitoreo... ¡Hasta luego! 👋[/bold yellow]")
+        console.print("\n[bold yellow]👋 Deteniekdkdndo el monitoreo... ¡Hasta luego! 👋[/bold yellow]")
