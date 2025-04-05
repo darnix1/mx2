@@ -5,6 +5,7 @@ from rich.table import Table
 from rich.panel import Panel
 from rich.box import SIMPLE
 from datetime import datetime
+import time
 
 # Inicializar Rich Console
 console = Console()
@@ -32,12 +33,6 @@ def convert(bytes):
 def cek_vmess():
     # Limpiar pantalla
     os.system("clear")
-
-    # Verificar líneas en el archivo de registro
-    with open("/var/log/xray/access.log", "r") as log_file:
-        xrayy = len(log_file.readlines())
-    if xrayy <= 5:
-        os.system("systemctl restart xray")
 
     # Mostrar encabezado bonito
     console.print(Panel("[bold cyan]• VMESS USER ONLINE •[/bold cyan]", style="cyan", box=SIMPLE))
@@ -99,25 +94,11 @@ def cek_vmess():
     else:
         console.print("[bold red]No hay usuarios VMESS activos.[/bold red]")
 
-    input("\nPresiona cualquier tecla para regresar al menú...")
-
-# Menú principal
-def menu():
-    while True:
-        os.system("clear")
-        console.print(Panel("[bold cyan]MAIN MENU[/bold cyan]", style="cyan", box=SIMPLE))
-        console.print("[1] Verificar usuarios VMESS activos")
-        console.print("[2] Salir")
-        choice = input("\nSelecciona una opción: ")
-        if choice == "1":
-            cek_vmess()
-        elif choice == "2":
-            console.print("[bold green]Saliendo...[/bold green]")
-            break
-        else:
-            console.print("[bold red]Opción inválida. Inténtalo de nuevo.[/bold red]")
-            time.sleep(2)
-
-# Ejecutar el menú
+# Ejecución continua en tiempo real
 if __name__ == "__main__":
-    menu()
+    try:
+        while True:
+            cek_vmess()
+            time.sleep(5)  # Espera 5 segundos antes de actualizar
+    except KeyboardInterrupt:
+        console.print("\n[bold yellow]Deteniendo el monitoreo...[/bold yellow]")
