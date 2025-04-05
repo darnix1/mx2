@@ -1,1 +1,119 @@
+import os
+import re
+import time
+from datetime import datetime
 
+# Colores para el menú
+COLOR1 = '\033[1;36m'
+NC = '\033[0m'
+
+# Función tim2sec (conversión de tiempo a segundos)
+def tim2sec(time_str):
+    parts = list(map(int, time_str.split(":")))
+    seconds = 0
+    for i, part in enumerate(reversed(parts)):
+        seconds += part * (60 ** i)
+    return seconds
+
+# Función convert (conversión de bytes a KB, MB, GB)
+def convert(bytes):
+    if bytes < 1024:
+        return f"{bytes} B"
+    elif bytes < 1048576:
+        return f"{(bytes + 1023) // 1024} KB"
+    elif bytes < 1073741824:
+        return f"{(bytes + 1048575) // 1048576} MB"
+    else:
+        return f"{(bytes + 1073741823) // 1073741824} GB"
+
+# Función cek_vmess (verificación de usuarios VMESS activos)
+def cek_vmess():
+    # Limpiar pantalla
+    os.system("clear")
+
+    # Verificar líneas en el archivo de registro
+    with open("/var/log/xray/access.log", "r") as log_file:
+        xrayy = len(log_file.readlines())
+    if xrayy <= 5:
+        os.system("systemctl restart xray")
+
+    print(f"{COLOR1}┌─────────────────────────────────────────────────┐{NC}")
+    print(f"{COLOR1}│{NC}             • VMESS USER ONLINE •               {COLOR1}│ {NC}")
+    print(f"{COLOR1}└─────────────────────────────────────────────────┘{NC}")
+    print(f"{COLOR1}┌─────────────────────────────────────────────────┐{NC}")
+
+    # Leer usuarios VMESS del archivo de configuración
+    vm_users = []
+    with open("/etc/xray/config.json", "r") as config_file:
+        for line in config_file:
+            match = re.search(r"^#vmg\s+(\S+)", line)
+            if match:
+                vm_users.append(match.group(1))
+
+    active_users = set()
+    for db1 in vm_users:
+        with open("/var/log/xray/access.log", "r") as log_file:
+            logvm = [line for line in log_file if f"email: {db1}" in line][-100:]
+        
+        for line in logvm:
+            parts = line.split()
+            if len(parts) >= 7:
+                ina, inu, anu = parts[6], parts[1], parts[2]
+                enu = re.sub(r"tcp://", "", anu).split(".")[0:3]
+                enu = ".".join(enu)
+
+                now = tim2sec(time.strftime("%H:%M:%S"))
+                client = tim2sec(inu)
+                nowt = now - client
+
+                if nowt < 40 and (ina, enu) not in active_users:
+                    active_users.add((ina, enu))
+
+    # Mostrar información de usuarios activos
+    if active_users:
+        for vmuser in vm_users:
+            vm_count = sum(1 for user in active_users if user[0] == vmuser)
+            if vm_count > 0:
+                try:
+                    with open(f"/etc/limit/vmess/{vmuser}", "r") as usage_file:
+                        byt = int(usage_file.read().strip())
+                    gb = convert(byt)
+
+                    with open(f"/etc/vmess/{vmuser}", "r") as limit_file:
+                        lim = int(limit_file.read().strip())
+                    lim2 = convert(lim)
+
+                    print(f"{COLOR1}{NC} USERNAME : \033[0;33m{vmuser}")
+                    print(f"{COLOR1}{NC} IP LOGIN : \033[0;33m{vm_count}")
+                    print(f"{COLOR1}{NC} USAGE : \033[0;33m{gb}")
+                    print(f"{COLOR1}{NC} LIMIT : \033[0;33m{lim2}")
+                    print("")
+                except FileNotFoundError:
+                    pass
+
+    print(f"{COLOR1}└─────────────────────────────────────────────────┘{NC}")
+    input("Press any key to go back to the menu...")
+
+# Menú principal
+def menu():
+    while True:
+        os.system("clear")
+        print(f"{COLOR1}┌─────────────────────────────────────────────────┐{NC}")
+        print(f"{COLOR1}│{NC}                 MAIN MENU                      {COLOR1}│{NC}")
+        print(f"{COLOR1}├─────────────────────────────────────────────────┤{NC}")
+        print(f"{COLOR1}│{NC} 1. Check VMESS Users Online                     {COLOR1}│{NC}")
+        print(f"{COLOR1}│{NC} 2. Exit                                         {COLOR1}│{NC}")
+        print(f"{COLOR1}└─────────────────────────────────────────────────┘{NC}")
+        choice = input("Select an option: ")
+        if choice == "1":
+            cek_vmess()
+        elif choice == "2":
+            print("Exiting...")
+            break
+        else:
+            print("Invalid option. Please try again.")
+            time.sleep(2)
+
+# Ejecutar el menú
+if __name__ == "__main__":
+    menu()
