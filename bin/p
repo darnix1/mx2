@@ -2,25 +2,25 @@
 import os
 import sys
 import subprocess
-from datetime import datetime, timedelta
+import time
 from rich.console import Console
-from rich.table import Table
 from rich.panel import Panel
-from rich.layout import Layout
+from rich.table import Table
 from rich.text import Text
-from rich.box import ROUNDED
-from rich.align import Align  # Esto es lo que faltaba importar
+from rich.box import SQUARE
 
 # Configurar consola Rich
 console = Console()
 
 # Estilos
-STYLE_TITLE = "bold bright_white on dark_blue"
+STYLE_TITLE = "bold white on blue"
 STYLE_HEADER = "bold bright_white"
-STYLE_OPTION = "bright_yellow"
+STYLE_OPTION = "bold bright_yellow"
 STYLE_VALUE = "bright_white"
-STYLE_ON = "bright_green"
-STYLE_OFF = "bright_red"
+STYLE_ON = "bold bright_green"
+STYLE_OFF = "bold bright_red"
+STYLE_COUNT = "bold bright_cyan"
+STYLE_BORDER = "bright_blue"
 
 def clear_screen():
     """Limpia la pantalla de la terminal"""
@@ -54,18 +54,13 @@ def get_system_info():
     info['ram_total'] = f"{int(mem[0])}MB" if len(mem) > 0 else "0MB"
     info['ram_used'] = f"{int(mem[1])}MB" if len(mem) > 1 else "0MB"
     
-    # Ubicación
-    info['isp'] = run_cmd("cat /etc/xray/isp 2>/dev/null") or "Desconocido"
-    info['city'] = run_cmd("cat /etc/xray/city 2>/dev/null") or "Desconocida"
-    info['author'] = run_cmd("cat /etc/profil 2>/dev/null") or "Desconocido"
-    
     # Estado de servicios
     def is_service_active(service):
         return run_cmd(f"systemctl is-active {service}") == "active"
     
-    info['ssh_status'] = "ON" if is_service_active("ws-stunnel") else "OFF"
-    info['xray_status'] = "ON" if is_service_active("xray") else "OFF"
-    info['nginx_status'] = "ON" if is_service_active("nginx") else "OFF"
+    info['ssh_status'] = is_service_active("ws-stunnel")
+    info['xray_status'] = is_service_active("xray")
+    info['nginx_status'] = is_service_active("nginx")
     
     # Conteo de usuarios
     def count_users(pattern, file):
@@ -84,149 +79,99 @@ def get_system_info():
     
     return info
 
-def create_menu_layout(info):
-    """Crea el diseño del menú principal"""
-    layout = Layout()
+def show_main_menu():
+    """Muestra el menú principal con el formato solicitado"""
+    clear_screen()
+    info = get_system_info()
     
-    # 1. Encabezado
-    header = Panel(
-        Text(" MENÚ PRINCIPAL ", justify="center"), 
-        style=STYLE_TITLE,
-        box=ROUNDED
-    )
+    # Panel de título
+    console.print(Panel.fit(
+        " MENÚ PRINCIPAL ",
+        style=STYLE_TITLE
+    ))
     
-    # 2. Información del sistema
+    # Información del sistema
     sys_info = Table.grid(padding=(0, 2))
-    sys_info.add_column(style=STYLE_OPTION, width=15)
+    sys_info.add_column(style=STYLE_HEADER, width=18)
     sys_info.add_column(style=STYLE_VALUE)
     
     sys_info.add_row("Sistema Operativo", info['os'])
     sys_info.add_row("Dominio", info['domain'])
     sys_info.add_row("IP Pública", info['ip'])
-    sys_info.add_row("RAM", f"{info['ram_used']} / {info['ram_total']}")
-    sys_info.add_row("Ubicación", f"{info['city']} ({info['isp']})")
-    sys_info.add_row("Autor", info['author'])
     
-    sys_panel = Panel(
-        sys_info,
-        title="[bold]INFORMACIÓN DEL SISTEMA[/]",
-        border_style="blue",
-        box=ROUNDED
+    console.print(sys_info)
+    console.print()
+    
+    # Estado de servicios en una línea
+    services_line = (
+        f"  [ SSHWS : [{STYLE_ON if info['ssh_status'] else STYLE_OFF}]{'ON' if info['ssh_status'] else 'OFF'}[/] ] "
+        f"[ XRAY : [{STYLE_ON if info['xray_status'] else STYLE_OFF}]{'ON' if info['xray_status'] else 'OFF'}[/] ] "
+        f"[ NGINX : [{STYLE_ON if info['nginx_status'] else STYLE_OFF}]{'ON' if info['nginx_status'] else 'OFF'}[/] ]"
+    )
+    console.print(services_line)
+    
+    # Control de registro
+    console.print("\n══════════════  CONTROL DE REGISTRO  ══════════════")
+    
+    # Usuarios en una línea
+    users_line = (
+        f"  SSHWS:[{STYLE_COUNT}]{info['ssh_users']}[/]  "
+        f"VMESS:[{STYLE_COUNT}]{info['vmess_users']}[/]  "
+        f"VLESS:[{STYLE_COUNT}]{info['vless_users']}[/]  "
+        f"TROJAN:[{STYLE_COUNT}]{info['trojan_users']}[/]"
+    )
+    console.print(users_line)
+    console.print("═══════════════════════════════════════════════════")
+    console.print("═══════════════════════════════════════════════════")
+    
+    # Opciones del menú
+    menu_table = Table.grid(padding=(0, 4))
+    menu_table.add_column(width=25)
+    menu_table.add_column(width=25)
+    
+    menu_table.add_row(
+        f"[{STYLE_OPTION}]1[/] • SSH OPENVPN",
+        f"[{STYLE_OPTION}]7[/] • NOTIBOT"
+    )
+    menu_table.add_row(
+        f"[{STYLE_OPTION}]2[/] • XRAY/VMESS",
+        f"[{STYLE_OPTION}]8[/] • TEMAS"
+    )
+    menu_table.add_row(
+        f"[{STYLE_OPTION}]3[/] • XRAY/VLESS",
+        f"[{STYLE_OPTION}]9[/] • UPDATE"
+    )
+    menu_table.add_row(
+        f"[{STYLE_OPTION}]4[/] • TROJAN",
+        f"[{STYLE_OPTION}]10[/] • SISTEMA"
+    )
+    menu_table.add_row(
+        f"[{STYLE_OPTION}]5[/] • SERVICIOS",
+        f"[{STYLE_OPTION}]11[/] • BACKUP"
+    )
+    menu_table.add_row(
+        f"[{STYLE_OPTION}]6[/] • TELEGRAM BOT",
+        f"[{STYLE_OPTION}]12[/] • REINICIAR"
     )
     
-    # 3. Estado de servicios
-    services = Table.grid(padding=(0, 2))
-    services.add_row(
-        f"SSHWS: [{STYLE_ON if info['ssh_status'] == 'ON' else STYLE_OFF}]{info['ssh_status']}[/]",
-        f"XRAY: [{STYLE_ON if info['xray_status'] == 'ON' else STYLE_OFF}]{info['xray_status']}[/]",
-        f"NGINX: [{STYLE_ON if info['nginx_status'] == 'ON' else STYLE_OFF}]{info['nginx_status']}[/]"
-    )
-    
-    services_panel = Panel(
-        Align.center(services),
-        title="[bold]ESTADO DE SERVICIOS[/]",
-        border_style="blue",
-        box=ROUNDED
-    )
-    
-    # 4. Usuarios registrados
-    users = Table(
-        show_header=True,
-        header_style="bold bright_white",
-        box=ROUNDED,
-        expand=True
-    )
-    users.add_column("Servicio", style="bright_white", justify="center")
-    users.add_column("Usuarios", style="bright_green", justify="center")
-    
-    users.add_row("SSH", str(info['ssh_users']))
-    users.add_row("VMESS", str(info['vmess_users']))
-    users.add_row("VLESS", str(info['vless_users']))
-    users.add_row("TROJAN", str(info['trojan_users']))
-    
-    users_panel = Panel(
-        users,
-        title="[bold]USUARIOS REGISTRADOS[/]",
-        border_style="blue",
-        box=ROUNDED
-    )
-    
-    # 5. Opciones del menú
-    menu_options = [
-        ("1. SSH/OpenVPN", "Administración de usuarios SSH", "7. NotiBot", "Configuración de notificaciones"),
-        ("2. Xray/VMESS", "Configuración VMESS", "8. Temas", "Personalizar interfaz"),
-        ("3. Xray/VLESS", "Configuración VLESS", "9. Actualizar", "Actualizar scripts"),
-        ("4. Trojan", "Configuración Trojan", "10. Sistema", "Configuración del sistema"),
-        ("5. Servicios", "Gestión de servicios", "11. Backup", "Copias de seguridad"),
-        ("6. Telegram Bot", "Configuración del bot", "12. Reiniciar", "Reiniciar servicios")
-    ]
-    
-    menu_table = Table.grid(padding=(0, 2), expand=True)
-    menu_table.add_column(width=15)
-    menu_table.add_column(width=30)
-    menu_table.add_column(width=15)
-    menu_table.add_column(width=30)
-    
-    for row in menu_options:
-        menu_table.add_row(
-            f"[{STYLE_OPTION}]{row[0]}[/]",
-            row[1],
-            f"[{STYLE_OPTION}]{row[2]}[/]",
-            row[3]
-        )
-    
-    menu_panel = Panel(
-        menu_table,
-        title="[bold]OPCIONES DEL MENÚ[/]",
-        border_style="blue",
-        box=ROUNDED,
-        padding=(1, 1)
-    )
-    
-    # Construir layout completo
-    layout.split(
-        Layout(header, name="header", size=3),
-        Layout(sys_panel, name="sys_info"),
-        Layout(services_panel, name="services", size=4),
-        Layout(users_panel, name="users", size=6),
-        Layout(menu_panel, name="menu")
-    )
-    
-    return layout
-
-def main_menu():
-    """Muestra el menú principal"""
-    clear_screen()
-    info = get_system_info()
-    layout = create_menu_layout(info)
-    
-    console.print(layout)
+    console.print(menu_table)
+    console.print()
     
     # Input para selección
-    console.print("\n")
     try:
         opt = console.input("[bright_white]Seleccione una opción (1-12): [/][bright_green]").strip()
         
         # Mapeo de opciones
         option_actions = {
-            '1': "m-sshovpn",
-            '01': "m-sshovpn",
-            '2': "m-vmess",
-            '02': "m-vmess",
-            '3': "m-vless",
-            '03': "m-vless",
-            '4': "m-trojan",
-            '04': "m-trojan",
-            '5': "running",
-            '05': "running",
-            '6': "m-bot",
-            '06': "m-bot",
-            '7': "m-bot2",
-            '07': "m-bot2",
-            '8': "m-theme",
-            '08': "m-theme",
-            '9': "m-update",
-            '09': "m-update",
+            '1': "m-sshovpn", '01': "m-sshovpn",
+            '2': "m-vmess", '02': "m-vmess",
+            '3': "m-vless", '03': "m-vless",
+            '4': "m-trojan", '04': "m-trojan",
+            '5': "running", '05': "running",
+            '6': "m-bot", '06': "m-bot",
+            '7': "m-bot2", '07': "m-bot2",
+            '8': "m-theme", '08': "m-theme",
+            '9': "m-update", '09': "m-update",
             '10': "m-system",
             '11': "m-backup",
             '12': "m-restart"
@@ -237,7 +182,7 @@ def main_menu():
         else:
             console.print("[bright_red]Opción no válida. Intente nuevamente.[/]")
             time.sleep(1)
-            main_menu()
+            show_main_menu()
             
     except KeyboardInterrupt:
         console.print("\n[bright_red]Saliendo del menú...[/]")
@@ -246,7 +191,7 @@ def main_menu():
 if __name__ == "__main__":
     try:
         while True:
-            main_menu()
+            show_main_menu()
     except Exception as e:
         console.print(f"[bright_red]Error: {str(e)}[/]")
         sys.exit(1)
