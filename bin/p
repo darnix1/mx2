@@ -2,387 +2,250 @@
 import os
 import sys
 import subprocess
-import requests
-import json
 from datetime import datetime, timedelta
-import time
-import re
-import readline
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
-from rich.progress import Progress
-from rich.style import Style
-from rich.text import Text
-from rich.box import ROUNDED, DOUBLE, SQUARE
 from rich.layout import Layout
-from rich.align import Align
+from rich.text import Text
+from rich.box import ROUNDED
 
 # Configurar consola Rich
 console = Console()
 
-# Estilos personalizados
-class Styles:
-    TITLE = Style(color="bright_white", bold=True, bgcolor="dark_blue")
-    HEADER = Style(color="bright_white", bold=True, bgcolor="blue")
-    OPTION = Style(color="bright_yellow", bold=True)
-    HIGHLIGHT = Style(color="bright_green", bold=True)
-    WARNING = Style(color="bright_red", bold=True)
-    INFO = Style(color="cyan")
-    SUCCESS = Style(color="bright_green")
-    SYSTEM = Style(color="bright_white")
-    BORDER = Style(color="dodger_blue1")
-
-# Funciones de utilidad
-def run_cmd(cmd):
-    try:
-        result = subprocess.run(cmd, shell=True, check=True, 
-                              stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                              text=True)
-        return result.stdout.strip()
-    except subprocess.CalledProcessError:
-        return ""
-
-def get_file_content(file_path):
-    if os.path.exists(file_path):
-        with open(file_path, 'r') as f:
-            return f.read().strip()
-    return ""
-
-def write_file(file_path, content):
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    with open(file_path, 'w') as f:
-        f.write(content)
+# Estilos
+STYLE_TITLE = "bold bright_white on dark_blue"
+STYLE_HEADER = "bold bright_white"
+STYLE_OPTION = "bright_yellow"
+STYLE_VALUE = "bright_white"
+STYLE_ON = "bright_green"
+STYLE_OFF = "bright_red"
 
 def clear_screen():
     os.system('clear' if os.name == 'posix' else 'cls')
 
-def create_menu_panel(title, content, width=None):
-    """Crea un panel de menú con estilo consistente"""
-    return Panel(
-        content,
-        title=f"[bold bright_white]{title}[/]",
-        border_style="dodger_blue1",
-        box=ROUNDED,
-        width=width,
-        padding=(0, 1),
-        title_align="left"
-    )
-
-def create_info_table(info_dict, title=None):
-    """Crea una tabla de información con estilo"""
-    table = Table(show_header=False, box=None, padding=(0, 1))
-    table.add_column(style="bright_yellow", width=12)
-    table.add_column(style="bright_white")
-    
-    for key, value in info_dict.items():
-        table.add_row(f"• {key}", value)
-    
-    if title:
-        return create_menu_panel(title, table)
-    return table
-
-def check_service(service):
-    status = run_cmd(f"systemctl is-active {service}")
-    if status == "active":
-        return f"[bright_green]ON[/]"
-    else:
-        return f"[bright_red]OFF[/]"
-
-def count_users_ssh():
-    if os.path.exists("/etc/xray/ssh"):
-        with open("/etc/xray/ssh", 'r') as f:
-            return len([line for line in f.readlines() if line.startswith("### ")])
-    return 0
-
-def count_users_vmess():
-    if os.path.exists("/etc/xray/config.json"):
-        with open("/etc/xray/config.json", 'r') as f:
-            return len([line for line in f.readlines() if line.strip().startswith("#vmg ")])
-    return 0
-
-def count_users_vless():
-    if os.path.exists("/etc/xray/config.json"):
-        with open("/etc/xray/config.json", 'r') as f:
-            return len([line for line in f.readlines() if line.strip().startswith("#vlg ")])
-    return 0
-
-def count_users_trojan():
-    if os.path.exists("/etc/xray/config.json"):
-        with open("/etc/xray/config.json", 'r') as f:
-            return len([line for line in f.readlines() if line.strip().startswith("#trg ")])
-    return 0
-
 def get_system_info():
+    """Obtiene información del sistema"""
+    def run_cmd(cmd):
+        try:
+            return subprocess.run(cmd, shell=True, check=True, 
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                text=True).stdout.strip()
+        except:
+            return ""
+
     info = {}
+    info['os'] = run_cmd("cat /etc/os-release | grep PRETTY_NAME | cut -d'=' -f2 | tr -d '\"'")
+    info['domain'] = run_cmd("cat /etc/xray/domain 2>/dev/null") or "No configurado"
+    info['ip'] = run_cmd("curl -s ifconfig.me") or "No disponible"
     
-    # Información básica del sistema
-    info['S.O'] = run_cmd("cat /etc/os-release | grep -w PRETTY_NAME | head -n1 | sed 's/=//g' | sed 's/\"//g' | sed 's/PRETTY_NAME//g'")
-    info['Dominio'] = get_file_content("/etc/xray/domain") or "No configurado"
-    info['IP Pública'] = run_cmd("curl ifconfig.me") or "No disponible"
+    mem = run_cmd("free -m | awk 'NR==2 {print $2 \" \" $3}'").split()
+    info['ram_total'] = f"{int(mem[0])}MB" if len(mem) > 0 else "0MB"
+    info['ram_used'] = f"{int(mem[1])}MB" if len(mem) > 1 else "0MB"
     
-    # Memoria
-    mem = run_cmd("free -h | awk 'NR==2 {print $2 \" \" $3}'").split()
-    info['RAM Total'] = mem[0] if len(mem) > 0 else "0"
-    info['RAM Usada'] = mem[1] if len(mem) > 1 else "0"
-    
-    # Ubicación
-    info['ISP'] = get_file_content("/etc/xray/isp") or "Desconocido"
-    info['Ciudad'] = get_file_content("/etc/xray/city") or "Desconocida"
-    info['Autor'] = get_file_content("/etc/profil") or "Desconocido"
-    
-    # Fecha y expiración
-    info['Fecha'] = run_cmd("date -R | cut -d \" \" -f -5")
-    today = datetime.now().strftime("%Y-%m-%d")
-    
-    try:
-        ip_data = requests.get("https://raw.githubusercontent.com/darnix1/permission/refs/heads/main/ip").text
-        for line in ip_data.split('\n'):
-            if info['IP Pública'] in line:
-                info['Expiración'] = line.split()[2]
-                break
-        else:
-            info['Expiración'] = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
-    except:
-        info['Expiración'] = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+    info['isp'] = run_cmd("cat /etc/xray/isp 2>/dev/null") or "Desconocido"
+    info['city'] = run_cmd("cat /etc/xray/city 2>/dev/null") or "Desconocida"
+    info['author'] = run_cmd("cat /etc/profil 2>/dev/null") or "Desconocido"
     
     # Estado de servicios
-    info['Servicios'] = (
-        f"SSHWS: {check_service('ws-stunnel')} | "
-        f"XRAY: {check_service('xray')} | "
-        f"NGINX: {check_service('nginx')}"
-    )
+    def is_service_active(service):
+        return "ON" if run_cmd(f"systemctl is-active {service}") == "active" else "OFF"
+    
+    info['ssh_status'] = is_service_active("ws-stunnel")
+    info['xray_status'] = is_service_active("xray")
+    info['nginx_status'] = is_service_active("nginx")
     
     # Conteo de usuarios
-    info['Usuarios'] = (
-        f"SSH: [bright_green]{count_users_ssh()}[/] | "
-        f"VMESS: [bright_green]{count_users_vmess()}[/] | "
-        f"VLESS: [bright_green]{count_users_vless()}[/] | "
-        f"TROJAN: [bright_green]{count_users_trojan()}[/]"
-    )
+    def count_users(pattern, file):
+        if os.path.exists(file):
+            return len([line for line in open(file) if line.startswith(pattern)])
+        return 0
     
-    # Uptime
-    info['Uptime'] = run_cmd("uptime -p").replace("up ", "") or "Desconocido"
-    
-    # Versión
-    info['Versión'] = get_file_content('/opt/.ver') or "Desconocida"
-    
-    # Días restantes
-    cert_days = (datetime.strptime(info['Expiración'], "%Y-%m-%d") - datetime.strptime(today, "%Y-%m-%d")).days
-    info['Estado'] = f"[bright_green]Activo ({cert_days} días)[/]" if cert_days > 0 else f"[bright_red]Expirado[/]"
+    info['ssh_users'] = count_users("### ", "/etc/xray/ssh")
+    info['vmess_users'] = count_users("#vmg ", "/etc/xray/config.json")
+    info['vless_users'] = count_users("#vlg ", "/etc/xray/config.json")
+    info['trojan_users'] = count_users("#trg ", "/etc/xray/config.json")
     
     return info
 
-def show_main_menu(info):
-    """Muestra el menú principal con diseño mejorado"""
-    
-    # Diseño de la página
+def create_menu_layout(info):
+    """Crea el diseño del menú principal"""
     layout = Layout()
+    
+    # 1. Encabezado
+    header = Panel(
+        Text(" MENÚ PRINCIPAL ", justify="center"), 
+        style=STYLE_TITLE,
+        box=ROUNDED
+    )
+    
+    # 2. Información del sistema
+    sys_info = Table.grid(padding=(0, 2))
+    sys_info.add_column(style=STYLE_OPTION, width=15)
+    sys_info.add_column(style=STYLE_VALUE)
+    
+    sys_info.add_row("Sistema Operativo", info['os'])
+    sys_info.add_row("Dominio", info['domain'])
+    sys_info.add_row("IP Pública", info['ip'])
+    sys_info.add_row("RAM", f"{info['ram_used']} / {info['ram_total']}")
+    sys_info.add_row("Ubicación", f"{info['city']} ({info['isp']})")
+    sys_info.add_row("Autor", info['author'])
+    
+    sys_panel = Panel(
+        sys_info,
+        title="[bold]INFORMACIÓN DEL SISTEMA[/]",
+        border_style="blue",
+        box=ROUNDED
+    )
+    
+    # 3. Estado de servicios
+    services = Table.grid(padding=(0, 2))
+    services.add_row(
+        f"SSHWS: [{STYLE_ON if info['ssh_status'] == 'ON' else STYLE_OFF}]{info['ssh_status']}[/]",
+        f"XRAY: [{STYLE_ON if info['xray_status'] == 'ON' else STYLE_OFF}]{info['xray_status']}[/]",
+        f"NGINX: [{STYLE_ON if info['nginx_status'] == 'ON' else STYLE_OFF}]{info['nginx_status']}[/]"
+    )
+    
+    services_panel = Panel(
+        Align.center(services),
+        title="[bold]ESTADO DE SERVICIOS[/]",
+        border_style="blue",
+        box=ROUNDED
+    )
+    
+    # 4. Usuarios registrados
+    users = Table(
+        show_header=True,
+        header_style="bold bright_white",
+        box=ROUNDED,
+        expand=True
+    )
+    users.add_column("Servicio", style="bright_white", justify="center")
+    users.add_column("Usuarios", style="bright_green", justify="center")
+    
+    users.add_row("SSH", str(info['ssh_users']))
+    users.add_row("VMESS", str(info['vmess_users']))
+    users.add_row("VLESS", str(info['vless_users']))
+    users.add_row("TROJAN", str(info['trojan_users']))
+    
+    users_panel = Panel(
+        users,
+        title="[bold]USUARIOS REGISTRADOS[/]",
+        border_style="blue",
+        box=ROUNDED
+    )
+    
+    # 5. Opciones del menú
+    menu_table = Table.grid(padding=(0, 2), expand=True)
+    menu_table.add_column(width=15)
+    menu_table.add_column(width=30)
+    menu_table.add_column(width=15)
+    menu_table.add_column(width=30)
+    
+    menu_table.add_row(
+        f"[{STYLE_OPTION}]1[/]. SSH/OpenVPN",
+        "Administración de usuarios SSH",
+        f"[{STYLE_OPTION}]7[/]. NotiBot",
+        "Configuración de notificaciones"
+    )
+    menu_table.add_row(
+        f"[{STYLE_OPTION}]2[/]. Xray/VMESS",
+        "Configuración VMESS",
+        f"[{STYLE_OPTION}]8[/]. Temas",
+        "Personalizar interfaz"
+    )
+    menu_table.add_row(
+        f"[{STYLE_OPTION}]3[/]. Xray/VLESS",
+        "Configuración VLESS",
+        f"[{STYLE_OPTION}]9[/]. Actualizar",
+        "Actualizar scripts"
+    )
+    menu_table.add_row(
+        f"[{STYLE_OPTION}]4[/]. Trojan",
+        "Configuración Trojan",
+        f"[{STYLE_OPTION}]10[/]. Sistema",
+        "Configuración del sistema"
+    )
+    menu_table.add_row(
+        f"[{STYLE_OPTION}]5[/]. Servicios",
+        "Gestión de servicios",
+        f"[{STYLE_OPTION}]11[/]. Backup",
+        "Copias de seguridad"
+    )
+    menu_table.add_row(
+        f"[{STYLE_OPTION}]6[/]. Telegram Bot",
+        "Configuración del bot",
+        f"[{STYLE_OPTION}]12[/]. Reiniciar",
+        "Reiniciar servicios"
+    )
+    
+    menu_panel = Panel(
+        menu_table,
+        title="[bold]OPCIONES DEL MENÚ[/]",
+        border_style="blue",
+        box=ROUNDED
+    )
+    
+    # Construir layout completo
     layout.split(
-        Layout(name="header", size=3),
-        Layout(name="system_info", size=10),
-        Layout(name="services", size=3),
-        Layout(name="user_counts", size=4),
-        Layout(name="menu_options", size=12),
-        Layout(name="footer", size=5)
+        Layout(header, name="header", size=3),
+        Layout(sys_panel, name="sys_info"),
+        Layout(services_panel, name="services", size=3),
+        Layout(users_panel, name="users", size=5),
+        Layout(menu_panel, name="menu")
     )
     
-    # Encabezado
-    layout["header"].update(
-        Panel.fit(
-            "[bold bright_white] MENÚ PRINCIPAL - ADMINISTRACIÓN DEL SERVIDOR [/]",
-            border_style="bright_blue",
-            style="bold bright_white on dark_blue"
-        )
-    )
-    
-    # Información del sistema
-    system_info = {
-        "Sistema Operativo": info['S.O'],
-        "Dominio": info['Dominio'],
-        "IP Pública": info['IP Pública'],
-        "RAM": f"{info['RAM Usada']} / {info['RAM Total']}",
-        "Ubicación": f"{info['Ciudad']} ({info['ISP']})",
-        "Autor": info['Autor'],
-        "Mensaje": get_file_content('/etc/newadm/message.txt') or "Bienvenido"
-    }
-    layout["system_info"].update(create_info_table(system_info, "INFORMACIÓN DEL SISTEMA"))
-    
-    # Estado de servicios
-    layout["services"].update(
-        create_menu_panel(
-            "ESTADO DE SERVICIOS",
-            Align.center(info['Servicios'])
-        )
-    )
-    
-    # Conteo de usuarios
-    user_table = Table(show_header=True, header_style="bold bright_white", box=SQUARE)
-    user_table.add_column("Servicio", style="bright_white", width=10)
-    user_table.add_column("Usuarios", style="bright_green", justify="center")
-    
-    user_table.add_row("SSH", str(count_users_ssh()))
-    user_table.add_row("VMESS", str(count_users_vmess()))
-    user_table.add_row("VLESS", str(count_users_vless()))
-    user_table.add_row("TROJAN", str(count_users_trojan()))
-    
-    layout["user_counts"].update(
-        create_menu_panel(
-            "USUARIOS REGISTRADOS",
-            Align.center(user_table)
-        )
-    )
-    
-    # Opciones del menú
-    menu_table = Table.grid(padding=(1, 3), expand=True)
-    menu_table.add_column(width=15)
-    menu_table.add_column(width=30)
-    menu_table.add_column(width=15)
-    menu_table.add_column(width=30)
-    
-    menu_table.add_row(
-        "[bright_yellow]1[/]. SSH/OpenVPN",
-        "[bright_white]Administración de usuarios SSH[/]",
-        "[bright_yellow]7[/]. NotiBot",
-        "[bright_white]Configuración de notificaciones[/]"
-    )
-    menu_table.add_row(
-        "[bright_yellow]2[/]. Xray/VMESS",
-        "[bright_white]Configuración VMESS[/]",
-        "[bright_yellow]8[/]. Temas",
-        "[bright_white]Personalizar interfaz[/]"
-    )
-    menu_table.add_row(
-        "[bright_yellow]3[/]. Xray/VLESS",
-        "[bright_white]Configuración VLESS[/]",
-        "[bright_yellow]9[/]. Actualizar",
-        "[bright_white]Actualizar scripts[/]"
-    )
-    menu_table.add_row(
-        "[bright_yellow]4[/]. Trojan",
-        "[bright_white]Configuración Trojan[/]",
-        "[bright_yellow]10[/]. Sistema",
-        "[bright_white]Configuración del sistema[/]"
-    )
-    menu_table.add_row(
-        "[bright_yellow]5[/]. Servicios",
-        "[bright_white]Gestión de servicios[/]",
-        "[bright_yellow]11[/]. Backup",
-        "[bright_white]Copias de seguridad[/]"
-    )
-    menu_table.add_row(
-        "[bright_yellow]6[/]. Telegram Bot",
-        "[bright_white]Configuración del bot[/]",
-        "[bright_yellow]12[/]. Reiniciar",
-        "[bright_white]Reiniciar servicios[/]"
-    )
-    
-    layout["menu_options"].update(
-        create_menu_panel(
-            "OPCIONES DEL MENÚ",
-            menu_table
-        )
-    )
-    
-    # Pie de página
-    footer_info = {
-        "Versión": info['Versión'],
-        "Expiración": f"{info['Expiración']} ({info['Estado']})",
-        "Uptime": info['Uptime']
-    }
-    layout["footer"].update(create_info_table(footer_info, "INFORMACIÓN ADICIONAL"))
-    
-    # Mostrar todo el diseño
-    console.print(layout)
+    return layout
 
-def restart_service():
-    clear_screen()
-    
-    console.print(
-        Panel.fit(
-            "[bold bright_white]REINICIO DE SERVICIOS DEL SERVIDOR[/]",
-            border_style="bright_green",
-            style="bold bright_white on dark_blue"
-        )
-    )
-    
-    with Progress() as progress:
-        task = progress.add_task("[bright_yellow]Reiniciando servicios...[/]", total=100)
-        
-        services = [
-            "nginx", "trojan-go", "xray", "noobzvpns", "daemon", 
-            "udp-custom", "ws-dropbear", "ws-stunnel", "openvpn", 
-            "cron", "netfilter-persistent", "squid", "badvpn1", 
-            "badvpn2", "badvpn3", "client", "server"
-        ]
-        
-        for i, service in enumerate(services):
-            progress.update(task, advance=100/len(services), description=f"[bright_yellow]Reiniciando {service}...[/]")
-            os.system(f"systemctl restart {service}")
-            time.sleep(0.1)
-    
-    console.print("\n[bold bright_green]✓ Todos los servicios han sido reiniciados correctamente[/]\n")
-    input(" Presione [Enter] para volver al menú principal ")
-    menu()
-
-def menu():
+def main_menu():
+    """Muestra el menú principal"""
     clear_screen()
     info = get_system_info()
-    show_main_menu(info)
+    layout = create_menu_layout(info)
     
-    # Selección de opción
-    opt = input("\n [bright_white]Seleccione una opción:[/] [bright_green]").strip()
+    console.print(layout)
     
-    # Manejo de opciones
-    if opt in ["01", "1"]:
-        clear_screen()
-        os.system("m-sshovpn")
-    elif opt in ["02", "2"]:
-        clear_screen()
-        os.system("m-vmess")
-    elif opt in ["03", "3"]:
-        clear_screen()
-        os.system("m-vless")
-    elif opt in ["04", "4"]:
-        clear_screen()
-        os.system("m-trojan")
-    elif opt in ["05", "5"]:
-        clear_screen()
-        os.system("running")
-    elif opt in ["06", "6"]:
-        clear_screen()
-        os.system("m-bot")
-    elif opt in ["07", "7"]:
-        clear_screen()
-        m_bot2()
-    elif opt in ["08", "8"]:
-        clear_screen()
-        os.system("m-theme")
-    elif opt in ["09", "9"]:
-        clear_screen()
-        os.system("m-update")
-    elif opt == "10":
-        clear_screen()
-        os.system("m-system")
-    elif opt == "11":
-        clear_screen()
-        os.system("m-backup")
-    elif opt == "12":
-        clear_screen()
-        restart_service()
-    elif opt in ["00", "0"]:
-        clear_screen()
-        menu()
-    else:
-        clear_screen()
-        menu()
+    # Input para selección
+    console.print("\n")
+    try:
+        opt = console.input("[bright_white]Seleccione una opción: [/][bright_green]").strip()
+        
+        # Manejo de opciones
+        if opt in ["1", "01"]:
+            os.system("m-sshovpn")
+        elif opt in ["2", "02"]:
+            os.system("m-vmess")
+        elif opt in ["3", "03"]:
+            os.system("m-vless")
+        elif opt in ["4", "04"]:
+            os.system("m-trojan")
+        elif opt in ["5", "05"]:
+            os.system("running")
+        elif opt in ["6", "06"]:
+            os.system("m-bot")
+        elif opt in ["7", "07"]:
+            os.system("m-bot2")
+        elif opt in ["8", "08"]:
+            os.system("m-theme")
+        elif opt in ["9", "09"]:
+            os.system("m-update")
+        elif opt == "10":
+            os.system("m-system")
+        elif opt == "11":
+            os.system("m-backup")
+        elif opt == "12":
+            os.system("m-restart")
+        else:
+            main_menu()
+            
+    except KeyboardInterrupt:
+        console.print("\n[bright_red]Saliendo...[/]")
+        sys.exit(0)
 
 if __name__ == "__main__":
-    # Verificar actualizaciones al inicio
     try:
-        check_and_update()
-    except:
-        pass
-    
-    # Iniciar menú principal xray
-    menu()
+        while True:
+            main_menu()
+    except Exception as e:
+        console.print(f"[bright_red]Error: {str(e)}[/]")
+        sys.exit(1)
