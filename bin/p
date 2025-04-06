@@ -9,6 +9,7 @@ from rich.panel import Panel
 from rich.layout import Layout
 from rich.text import Text
 from rich.box import ROUNDED
+from rich.align import Align  # Esto es lo que faltaba importar
 
 # Configurar consola Rich
 console = Console()
@@ -22,44 +23,59 @@ STYLE_ON = "bright_green"
 STYLE_OFF = "bright_red"
 
 def clear_screen():
+    """Limpia la pantalla de la terminal"""
     os.system('clear' if os.name == 'posix' else 'cls')
+
+def run_cmd(cmd):
+    """Ejecuta un comando de shell y devuelve el resultado"""
+    try:
+        return subprocess.run(
+            cmd, 
+            shell=True, 
+            check=True, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE,
+            text=True
+        ).stdout.strip()
+    except subprocess.CalledProcessError:
+        return ""
 
 def get_system_info():
     """Obtiene información del sistema"""
-    def run_cmd(cmd):
-        try:
-            return subprocess.run(cmd, shell=True, check=True, 
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                text=True).stdout.strip()
-        except:
-            return ""
-
     info = {}
+    
+    # Información básica
     info['os'] = run_cmd("cat /etc/os-release | grep PRETTY_NAME | cut -d'=' -f2 | tr -d '\"'")
     info['domain'] = run_cmd("cat /etc/xray/domain 2>/dev/null") or "No configurado"
     info['ip'] = run_cmd("curl -s ifconfig.me") or "No disponible"
     
+    # Memoria RAM
     mem = run_cmd("free -m | awk 'NR==2 {print $2 \" \" $3}'").split()
     info['ram_total'] = f"{int(mem[0])}MB" if len(mem) > 0 else "0MB"
     info['ram_used'] = f"{int(mem[1])}MB" if len(mem) > 1 else "0MB"
     
+    # Ubicación
     info['isp'] = run_cmd("cat /etc/xray/isp 2>/dev/null") or "Desconocido"
     info['city'] = run_cmd("cat /etc/xray/city 2>/dev/null") or "Desconocida"
     info['author'] = run_cmd("cat /etc/profil 2>/dev/null") or "Desconocido"
     
     # Estado de servicios
     def is_service_active(service):
-        return "ON" if run_cmd(f"systemctl is-active {service}") == "active" else "OFF"
+        return run_cmd(f"systemctl is-active {service}") == "active"
     
-    info['ssh_status'] = is_service_active("ws-stunnel")
-    info['xray_status'] = is_service_active("xray")
-    info['nginx_status'] = is_service_active("nginx")
+    info['ssh_status'] = "ON" if is_service_active("ws-stunnel") else "OFF"
+    info['xray_status'] = "ON" if is_service_active("xray") else "OFF"
+    info['nginx_status'] = "ON" if is_service_active("nginx") else "OFF"
     
     # Conteo de usuarios
     def count_users(pattern, file):
-        if os.path.exists(file):
-            return len([line for line in open(file) if line.startswith(pattern)])
-        return 0
+        try:
+            if os.path.exists(file):
+                with open(file, 'r') as f:
+                    return sum(1 for line in f if line.startswith(pattern))
+            return 0
+        except:
+            return 0
     
     info['ssh_users'] = count_users("### ", "/etc/xray/ssh")
     info['vmess_users'] = count_users("#vmg ", "/etc/xray/config.json")
@@ -136,62 +152,43 @@ def create_menu_layout(info):
     )
     
     # 5. Opciones del menú
+    menu_options = [
+        ("1. SSH/OpenVPN", "Administración de usuarios SSH", "7. NotiBot", "Configuración de notificaciones"),
+        ("2. Xray/VMESS", "Configuración VMESS", "8. Temas", "Personalizar interfaz"),
+        ("3. Xray/VLESS", "Configuración VLESS", "9. Actualizar", "Actualizar scripts"),
+        ("4. Trojan", "Configuración Trojan", "10. Sistema", "Configuración del sistema"),
+        ("5. Servicios", "Gestión de servicios", "11. Backup", "Copias de seguridad"),
+        ("6. Telegram Bot", "Configuración del bot", "12. Reiniciar", "Reiniciar servicios")
+    ]
+    
     menu_table = Table.grid(padding=(0, 2), expand=True)
     menu_table.add_column(width=15)
     menu_table.add_column(width=30)
     menu_table.add_column(width=15)
     menu_table.add_column(width=30)
     
-    menu_table.add_row(
-        f"[{STYLE_OPTION}]1[/]. SSH/OpenVPN",
-        "Administración de usuarios SSH",
-        f"[{STYLE_OPTION}]7[/]. NotiBot",
-        "Configuración de notificaciones"
-    )
-    menu_table.add_row(
-        f"[{STYLE_OPTION}]2[/]. Xray/VMESS",
-        "Configuración VMESS",
-        f"[{STYLE_OPTION}]8[/]. Temas",
-        "Personalizar interfaz"
-    )
-    menu_table.add_row(
-        f"[{STYLE_OPTION}]3[/]. Xray/VLESS",
-        "Configuración VLESS",
-        f"[{STYLE_OPTION}]9[/]. Actualizar",
-        "Actualizar scripts"
-    )
-    menu_table.add_row(
-        f"[{STYLE_OPTION}]4[/]. Trojan",
-        "Configuración Trojan",
-        f"[{STYLE_OPTION}]10[/]. Sistema",
-        "Configuración del sistema"
-    )
-    menu_table.add_row(
-        f"[{STYLE_OPTION}]5[/]. Servicios",
-        "Gestión de servicios",
-        f"[{STYLE_OPTION}]11[/]. Backup",
-        "Copias de seguridad"
-    )
-    menu_table.add_row(
-        f"[{STYLE_OPTION}]6[/]. Telegram Bot",
-        "Configuración del bot",
-        f"[{STYLE_OPTION}]12[/]. Reiniciar",
-        "Reiniciar servicios"
-    )
+    for row in menu_options:
+        menu_table.add_row(
+            f"[{STYLE_OPTION}]{row[0]}[/]",
+            row[1],
+            f"[{STYLE_OPTION}]{row[2]}[/]",
+            row[3]
+        )
     
     menu_panel = Panel(
         menu_table,
         title="[bold]OPCIONES DEL MENÚ[/]",
         border_style="blue",
-        box=ROUNDED
+        box=ROUNDED,
+        padding=(1, 1)
     )
     
     # Construir layout completo
     layout.split(
         Layout(header, name="header", size=3),
         Layout(sys_panel, name="sys_info"),
-        Layout(services_panel, name="services", size=3),
-        Layout(users_panel, name="users", size=5),
+        Layout(services_panel, name="services", size=4),
+        Layout(users_panel, name="users", size=6),
         Layout(menu_panel, name="menu")
     )
     
@@ -208,38 +205,42 @@ def main_menu():
     # Input para selección
     console.print("\n")
     try:
-        opt = console.input("[bright_white]Seleccione una opción: [/][bright_green]").strip()
+        opt = console.input("[bright_white]Seleccione una opción (1-12): [/][bright_green]").strip()
         
-        # Manejo de opciones
-        if opt in ["1", "01"]:
-            os.system("m-sshovpn")
-        elif opt in ["2", "02"]:
-            os.system("m-vmess")
-        elif opt in ["3", "03"]:
-            os.system("m-vless")
-        elif opt in ["4", "04"]:
-            os.system("m-trojan")
-        elif opt in ["5", "05"]:
-            os.system("running")
-        elif opt in ["6", "06"]:
-            os.system("m-bot")
-        elif opt in ["7", "07"]:
-            os.system("m-bot2")
-        elif opt in ["8", "08"]:
-            os.system("m-theme")
-        elif opt in ["9", "09"]:
-            os.system("m-update")
-        elif opt == "10":
-            os.system("m-system")
-        elif opt == "11":
-            os.system("m-backup")
-        elif opt == "12":
-            os.system("m-restart")
+        # Mapeo de opciones
+        option_actions = {
+            '1': "m-sshovpn",
+            '01': "m-sshovpn",
+            '2': "m-vmess",
+            '02': "m-vmess",
+            '3': "m-vless",
+            '03': "m-vless",
+            '4': "m-trojan",
+            '04': "m-trojan",
+            '5': "running",
+            '05': "running",
+            '6': "m-bot",
+            '06': "m-bot",
+            '7': "m-bot2",
+            '07': "m-bot2",
+            '8': "m-theme",
+            '08': "m-theme",
+            '9': "m-update",
+            '09': "m-update",
+            '10': "m-system",
+            '11': "m-backup",
+            '12': "m-restart"
+        }
+        
+        if opt in option_actions:
+            os.system(option_actions[opt])
         else:
+            console.print("[bright_red]Opción no válida. Intente nuevamente.[/]")
+            time.sleep(1)
             main_menu()
             
     except KeyboardInterrupt:
-        console.print("\n[bright_red]Saliendo...[/]")
+        console.print("\n[bright_red]Saliendo del menú...[/]")
         sys.exit(0)
 
 if __name__ == "__main__":
