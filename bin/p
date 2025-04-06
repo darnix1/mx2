@@ -14,21 +14,24 @@ from rich.panel import Panel
 from rich.progress import Progress
 from rich.style import Style
 from rich.text import Text
-from rich.box import SIMPLE_HEAVY
+from rich.box import ROUNDED, DOUBLE, SQUARE
+from rich.layout import Layout
+from rich.align import Align
 
 # Configurar consola Rich
 console = Console()
 
-# Configuración de colores
-class Colors:
-    RED = "red"
-    GREEN = "green"
-    YELLOW = "yellow"
-    BLUE = "blue"
-    WHITE = "white"
-    CYAN = "cyan"
-    COLOR1 = "bright_green"  # Verde brillante
-    COLBG1 = "on bright_green"  # Fondo verde brillante
+# Estilos personalizados
+class Styles:
+    TITLE = Style(color="bright_white", bold=True, bgcolor="dark_blue")
+    HEADER = Style(color="bright_white", bold=True, bgcolor="blue")
+    OPTION = Style(color="bright_yellow", bold=True)
+    HIGHLIGHT = Style(color="bright_green", bold=True)
+    WARNING = Style(color="bright_red", bold=True)
+    INFO = Style(color="cyan")
+    SUCCESS = Style(color="bright_green")
+    SYSTEM = Style(color="bright_white")
+    BORDER = Style(color="dodger_blue1")
 
 # Funciones de utilidad
 def run_cmd(cmd):
@@ -54,12 +57,37 @@ def write_file(file_path, content):
 def clear_screen():
     os.system('clear' if os.name == 'posix' else 'cls')
 
+def create_menu_panel(title, content, width=None):
+    """Crea un panel de menú con estilo consistente"""
+    return Panel(
+        content,
+        title=f"[bold bright_white]{title}[/]",
+        border_style="dodger_blue1",
+        box=ROUNDED,
+        width=width,
+        padding=(0, 1),
+        title_align="left"
+    )
+
+def create_info_table(info_dict, title=None):
+    """Crea una tabla de información con estilo"""
+    table = Table(show_header=False, box=None, padding=(0, 1))
+    table.add_column(style="bright_yellow", width=12)
+    table.add_column(style="bright_white")
+    
+    for key, value in info_dict.items():
+        table.add_row(f"• {key}", value)
+    
+    if title:
+        return create_menu_panel(title, table)
+    return table
+
 def check_service(service):
     status = run_cmd(f"systemctl is-active {service}")
     if status == "active":
-        return f"[{Colors.COLOR1}]ON[/]"
+        return f"[bright_green]ON[/]"
     else:
-        return f"[{Colors.RED}]OFF[/]"
+        return f"[bright_red]OFF[/]"
 
 def count_users_ssh():
     if os.path.exists("/etc/xray/ssh"):
@@ -85,348 +113,225 @@ def count_users_trojan():
             return len([line for line in f.readlines() if line.strip().startswith("#trg ")])
     return 0
 
-def count_users_noobz():
-    if os.path.exists("/etc/xray/noob"):
-        with open("/etc/xray/noob", 'r') as f:
-            return len([line for line in f.readlines() if line.startswith("### ")])
-    return 0
-
-def count_users_trojan_go():
-    if os.path.exists("/etc/trojan-go/trgo"):
-        with open("/etc/trojan-go/trgo", 'r') as f:
-            return len([line for line in f.readlines() if line.startswith("### ")])
-    return 0
-
 def get_system_info():
     info = {}
     
     # Información básica del sistema
-    info['model'] = run_cmd("cat /etc/os-release | grep -w PRETTY_NAME | head -n1 | sed 's/=//g' | sed 's/\"//g' | sed 's/PRETTY_NAME//g'")
-    info['domain'] = get_file_content("/etc/xray/domain")
-    info['myip'] = run_cmd("curl ifconfig.me")
+    info['S.O'] = run_cmd("cat /etc/os-release | grep -w PRETTY_NAME | head -n1 | sed 's/=//g' | sed 's/\"//g' | sed 's/PRETTY_NAME//g'")
+    info['Dominio'] = get_file_content("/etc/xray/domain") or "No configurado"
+    info['IP Pública'] = run_cmd("curl ifconfig.me") or "No disponible"
     
     # Memoria
     mem = run_cmd("free -h | awk 'NR==2 {print $2 \" \" $3}'").split()
-    info['tram'] = mem[0] if len(mem) > 0 else "0"
-    info['uram'] = mem[1] if len(mem) > 1 else "0"
+    info['RAM Total'] = mem[0] if len(mem) > 0 else "0"
+    info['RAM Usada'] = mem[1] if len(mem) > 1 else "0"
     
     # Ubicación
-    info['isp'] = get_file_content("/etc/xray/isp")
-    info['city'] = get_file_content("/etc/xray/city")
-    info['author'] = get_file_content("/etc/profil")
+    info['ISP'] = get_file_content("/etc/xray/isp") or "Desconocido"
+    info['Ciudad'] = get_file_content("/etc/xray/city") or "Desconocida"
+    info['Autor'] = get_file_content("/etc/profil") or "Desconocido"
     
     # Fecha y expiración
-    info['date'] = run_cmd("date -R | cut -d \" \" -f -5")
-    info['today'] = datetime.now().strftime("%Y-%m-%d")
+    info['Fecha'] = run_cmd("date -R | cut -d \" \" -f -5")
+    today = datetime.now().strftime("%Y-%m-%d")
     
     try:
         ip_data = requests.get("https://raw.githubusercontent.com/darnix1/permission/refs/heads/main/ip").text
         for line in ip_data.split('\n'):
-            if info['myip'] in line:
-                info['exp2'] = line.split()[2]
+            if info['IP Pública'] in line:
+                info['Expiración'] = line.split()[2]
                 break
         else:
-            info['exp2'] = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+            info['Expiración'] = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
     except:
-        info['exp2'] = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+        info['Expiración'] = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
     
     # Estado de servicios
-    info['services'] = {
-        'xray': check_service("xray"),
-        'nginx': check_service("nginx"),
-        'ws-stunnel': check_service("ws-stunnel"),
-        'noobzvpns': check_service("noobzvpns"),
-        'dropbear': check_service("dropbear"),
-        'udp-custom': check_service("udp-custom"),
-        'trojan-go': check_service("trojan-go")
-    }
+    info['Servicios'] = (
+        f"SSHWS: {check_service('ws-stunnel')} | "
+        f"XRAY: {check_service('xray')} | "
+        f"NGINX: {check_service('nginx')}"
+    )
     
     # Conteo de usuarios
-    info['user_counts'] = {
-        'ssh': count_users_ssh(),
-        'vmess': count_users_vmess(),
-        'vless': count_users_vless(),
-        'trojan': count_users_trojan(),
-        'noobz': count_users_noobz(),
-        'trojan_go': count_users_trojan_go()
-    }
+    info['Usuarios'] = (
+        f"SSH: [bright_green]{count_users_ssh()}[/] | "
+        f"VMESS: [bright_green]{count_users_vmess()}[/] | "
+        f"VLESS: [bright_green]{count_users_vless()}[/] | "
+        f"TROJAN: [bright_green]{count_users_trojan()}[/]"
+    )
     
     # Uptime
-    uptime = run_cmd("uptime -p").replace("up ", "")
-    info['uptime'] = uptime
+    info['Uptime'] = run_cmd("uptime -p").replace("up ", "") or "Desconocido"
+    
+    # Versión
+    info['Versión'] = get_file_content('/opt/.ver') or "Desconocida"
+    
+    # Días restantes
+    cert_days = (datetime.strptime(info['Expiración'], "%Y-%m-%d") - datetime.strptime(today, "%Y-%m-%d")).days
+    info['Estado'] = f"[bright_green]Activo ({cert_days} días)[/]" if cert_days > 0 else f"[bright_red]Expirado[/]"
     
     return info
 
-def show_update_panel(commit_message):
-    console.print(Panel.fit(
-        f"[bold white]• UPDATE SCRIPT AVAILABLE •[/]\n\n"
-        f"[white]Repository: jvoscript/autoscript-vip[/]\n"
-        f"[white]Latest Changes:[/]\n"
-        f"1. {commit_message}",
-        title="[bold yellow]UPDATE AVAILABLE[/]",
-        border_style="cyan",
-        padding=(1, 2)
-    ))
-
-def check_and_update():
-    try:
-        # Obtener último commit de GitHub
-        response = requests.get("https://api.github.com/repos/darnix1/Premium/commits/main")
-        if response.status_code == 200:
-            data = response.json()
-            latest_commit = data.get('sha', '')
-            commit_message = data.get('commit', {}).get('message', '')
-            
-            # Obtener último commit guardado
-            last_commit = ""
-            last_update_time = "Never"
-            if os.path.exists("/etc/github/last_commit"):
-                with open("/etc/github/last_commit", 'r') as f:
-                    lines = f.readlines()
-                    if lines:
-                        last_commit = lines[0].split()[0] if len(lines[0].split()) > 0 else ""
-                        last_update_time = " ".join(lines[0].split()[1:3]) if len(lines[0].split()) > 2 else "Never"
-            
-            # Verificar si hay actualizaciones
-            if latest_commit != last_commit:
-                show_update_panel(commit_message)
-                console.print(f"Last update: {last_update_time}")
-                
-                update_choice = input("Do you want to update the script? (Y/N): ").strip().lower()
-                if update_choice == 'y':
-                    with Progress() as progress:
-                        task = progress.add_task("[cyan]Updating script...", total=100)
-                        for i in range(100):
-                            time.sleep(0.02)
-                            progress.update(task, advance=1)
-                    
-                    os.system("wget -q https://raw.githubusercontent.com/darnix1/mx2/refs/heads/main/menu/m-update.sh -O m-update.sh")
-                    os.system("chmod +x m-update.sh && ./m-update.sh")
-                    
-                    update_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    write_file("/etc/github/last_commit", f"{latest_commit} {update_time}")
-                    console.print(f"[green]Actualización completada {update_time}.[/]")
-                else:
-                    console.print("[yellow]Update skipped.[/]")
-    except Exception as e:
-        console.print(f"[red]Error checking updates: {str(e)}[/]")
-
-def m_bot2():
-    clear_screen()
+def show_main_menu(info):
+    """Muestra el menú principal con diseño mejorado"""
     
-    table = Table(
-        title="[bold bright_green]Please select a Bot type below[/]",
-        box=SIMPLE_HEAVY,
-        border_style="bright_green",
-        header_style="bold white",
-        title_style="bold bright_green"
+    # Diseño de la página
+    layout = Layout()
+    layout.split(
+        Layout(name="header", size=3),
+        Layout(name="system_info", size=10),
+        Layout(name="services", size=3),
+        Layout(name="user_counts", size=4),
+        Layout(name="menu_options", size=12),
+        Layout(name="footer", size=5)
     )
     
-    table.add_column("Option", style="bright_green", width=10)
-    table.add_column("Description", style="white")
+    # Encabezado
+    layout["header"].update(
+        Panel.fit(
+            "[bold bright_white] MENÚ PRINCIPAL - ADMINISTRACIÓN DEL SERVIDOR [/]",
+            border_style="bright_blue",
+            style="bold bright_white on dark_blue"
+        )
+    )
     
-    table.add_row("1", "Buat/Edit BOT INFO Multi Login SSH, XRAY & TRANSAKSI")
-    table.add_row("2", "Buat/Edit BOT INFO Create User & Lain Lain")
-    table.add_row("3", "Buat/Edit BOT INFO Backup Telegram")
+    # Información del sistema
+    system_info = {
+        "Sistema Operativo": info['S.O'],
+        "Dominio": info['Dominio'],
+        "IP Pública": info['IP Pública'],
+        "RAM": f"{info['RAM Usada']} / {info['RAM Total']}",
+        "Ubicación": f"{info['Ciudad']} ({info['ISP']})",
+        "Autor": info['Autor'],
+        "Mensaje": get_file_content('/etc/newadm/message.txt') or "Bienvenido"
+    }
+    layout["system_info"].update(create_info_table(system_info, "INFORMACIÓN DEL SISTEMA"))
     
-    console.print(table)
+    # Estado de servicios
+    layout["services"].update(
+        create_menu_panel(
+            "ESTADO DE SERVICIOS",
+            Align.center(info['Servicios'])
+        )
+    )
     
-    bot = input("   Please select numbers 1-3 or Any Button(Random) to exit : ").strip()
-    print("")
+    # Conteo de usuarios
+    user_table = Table(show_header=True, header_style="bold bright_white", box=SQUARE)
+    user_table.add_column("Servicio", style="bright_white", width=10)
+    user_table.add_column("Usuarios", style="bright_green", justify="center")
     
-    if bot == "1":
-        clear_screen()
-        os.system("rm -rf /etc/perlogin")
-        os.system("mkdir -p /etc/perlogin")
-        os.chdir("/etc/perlogin")
-        os.system("touch token")
-        os.system("touch id")
-        
-        console.print("[bold bright_green][ INFO ][/] [white]Create for database Multi Login[/]")
-        token2 = input("Enter Token (Creat on @BotFather) : ").strip()
-        write_file("/etc/perlogin/token", token2)
-        idat = input("Enter Your Id (Creat on @userinfobot)  : ").strip()
-        write_file("/etc/perlogin/id", idat)
-        time.sleep(1)
-        m_bot2()
-    elif bot == "2":
-        clear_screen()
-        os.system("rm -rf /etc/per")
-        os.system("mkdir -p /etc/per")
-        os.chdir("/etc/per")
-        os.system("touch token")
-        os.system("touch id")
-        
-        console.print("[bold bright_green][ INFO ][/] [white]Create for database Akun Dan Lain Lain[/]")
-        token3 = input("Enter Token (Creat on @BotFather) : ").strip()
-        write_file("/etc/per/token", token3)
-        idat2 = input("Enter Your Id (Creat on @userinfobot)  : ").strip()
-        write_file("/etc/per/id", idat2)
-        time.sleep(1)
-        m_bot2()
-    elif bot == "3":
-        clear_screen()
-        os.system("rm -rf /usr/bin/token")
-        os.system("rm -rf /usr/bin/idchat")
-        
-        console.print("[bold bright_green][ INFO ][/] [white]Create for database Backup Telegram[/]")
-        token23 = input("Enter Token (Creat on @BotFather) : ").strip()
-        write_file("/usr/bin/token", token23)
-        idchat = input("Enter Your Id (Creat on @userinfobot)  : ").strip()
-        write_file("/usr/bin/idchat", idchat)
-        time.sleep(1)
-        m_bot2()
-    else:
-        menu()
+    user_table.add_row("SSH", str(count_users_ssh()))
+    user_table.add_row("VMESS", str(count_users_vmess()))
+    user_table.add_row("VLESS", str(count_users_vless()))
+    user_table.add_row("TROJAN", str(count_users_trojan()))
+    
+    layout["user_counts"].update(
+        create_menu_panel(
+            "USUARIOS REGISTRADOS",
+            Align.center(user_table)
+        )
+    )
+    
+    # Opciones del menú
+    menu_table = Table.grid(padding=(1, 3), expand=True)
+    menu_table.add_column(width=15)
+    menu_table.add_column(width=30)
+    menu_table.add_column(width=15)
+    menu_table.add_column(width=30)
+    
+    menu_table.add_row(
+        "[bright_yellow]1[/]. SSH/OpenVPN",
+        "[bright_white]Administración de usuarios SSH[/]",
+        "[bright_yellow]7[/]. NotiBot",
+        "[bright_white]Configuración de notificaciones[/]"
+    )
+    menu_table.add_row(
+        "[bright_yellow]2[/]. Xray/VMESS",
+        "[bright_white]Configuración VMESS[/]",
+        "[bright_yellow]8[/]. Temas",
+        "[bright_white]Personalizar interfaz[/]"
+    )
+    menu_table.add_row(
+        "[bright_yellow]3[/]. Xray/VLESS",
+        "[bright_white]Configuración VLESS[/]",
+        "[bright_yellow]9[/]. Actualizar",
+        "[bright_white]Actualizar scripts[/]"
+    )
+    menu_table.add_row(
+        "[bright_yellow]4[/]. Trojan",
+        "[bright_white]Configuración Trojan[/]",
+        "[bright_yellow]10[/]. Sistema",
+        "[bright_white]Configuración del sistema[/]"
+    )
+    menu_table.add_row(
+        "[bright_yellow]5[/]. Servicios",
+        "[bright_white]Gestión de servicios[/]",
+        "[bright_yellow]11[/]. Backup",
+        "[bright_white]Copias de seguridad[/]"
+    )
+    menu_table.add_row(
+        "[bright_yellow]6[/]. Telegram Bot",
+        "[bright_white]Configuración del bot[/]",
+        "[bright_yellow]12[/]. Reiniciar",
+        "[bright_white]Reiniciar servicios[/]"
+    )
+    
+    layout["menu_options"].update(
+        create_menu_panel(
+            "OPCIONES DEL MENÚ",
+            menu_table
+        )
+    )
+    
+    # Pie de página
+    footer_info = {
+        "Versión": info['Versión'],
+        "Expiración": f"{info['Expiración']} ({info['Estado']})",
+        "Uptime": info['Uptime']
+    }
+    layout["footer"].update(create_info_table(footer_info, "INFORMACIÓN ADICIONAL"))
+    
+    # Mostrar todo el diseño
+    console.print(layout)
 
 def restart_service():
     clear_screen()
     
-    # Panel de título
-    console.print(Panel.fit(
-        "[bold white]RESTART SERVICE VPS[/]",
-        border_style="bright_green",
-        style="bold white"
-    ))
+    console.print(
+        Panel.fit(
+            "[bold bright_white]REINICIO DE SERVICIOS DEL SERVIDOR[/]",
+            border_style="bright_green",
+            style="bold bright_white on dark_blue"
+        )
+    )
     
-    # Barra de progreso simulada
     with Progress() as progress:
-        task = progress.add_task("[yellow]Please Wait Loading[/]", total=100)
-        for i in range(100):
-            time.sleep(0.03)
-            progress.update(task, advance=1)
+        task = progress.add_task("[bright_yellow]Reiniciando servicios...[/]", total=100)
+        
+        services = [
+            "nginx", "trojan-go", "xray", "noobzvpns", "daemon", 
+            "udp-custom", "ws-dropbear", "ws-stunnel", "openvpn", 
+            "cron", "netfilter-persistent", "squid", "badvpn1", 
+            "badvpn2", "badvpn3", "client", "server"
+        ]
+        
+        for i, service in enumerate(services):
+            progress.update(task, advance=100/len(services), description=f"[bright_yellow]Reiniciando {service}...[/]")
+            os.system(f"systemctl restart {service}")
+            time.sleep(0.1)
     
-    console.print("[bold red] Restart All Service... [/]")
-    
-    # Reiniciar servicios
-    services = [
-        "nginx", "trojan-go", "xray", "noobzvpns", "daemon", 
-        "udp-custom", "ws-dropbear", "ws-stunnel", "openvpn", 
-        "cron", "netfilter-persistent", "squid", "badvpn1", 
-        "badvpn2", "badvpn3", "client", "server"
-    ]
-    
-    for service in services:
-        os.system(f"systemctl restart {service}")
-    
-    console.print("\n[green]All services have been restarted successfully![/]")
-    input("\nPress [Enter] to back on menu")
+    console.print("\n[bold bright_green]✓ Todos los servicios han sido reiniciados correctamente[/]\n")
+    input(" Presione [Enter] para volver al menú principal ")
     menu()
 
 def menu():
     clear_screen()
     info = get_system_info()
-    
-    # Panel de título
-    console.print(Panel.fit(
-        "[bold white] MENU AUTO [/]",
-        border_style="cyan",
-        style="bold white"
-    ))
-    
-    # Información del sistema
-    sys_info = Table.grid(padding=(0, 2))
-    sys_info.add_column(style="white")
-    sys_info.add_column(style="green")
-    
-    sys_info.add_row("• S.O", info['model'])
-    sys_info.add_row("• DOMINIO", info['domain'])
-    sys_info.add_row("• RAM USADO", f"{info['tram']} / {info['uram']} MB")
-    sys_info.add_row("• AUTOR", info['author'])
-    sys_info.add_row("• Message", get_file_content('/etc/newadm/message.txt'))
-    
-    console.print(sys_info)
-    
-    # Estado de servicios
-    services_table = Table.grid(padding=(0, 1))
-    services_table.add_row(
-        f"[white][ SSHWS : {info['services']['ws-stunnel']} [/]",
-        f"[white][ XRAY : {info['services']['xray']} [/]",
-        f"[white][ NGINX : {info['services']['nginx']} [/]"
-    )
-    console.print(services_table)
-    
-    # Conteo de usuarios
-    user_counts = Table(
-        title="[bold cyan]CONTROL DE REGISTRO[/]",
-        box=SIMPLE_HEAVY,
-        border_style="cyan",
-        show_header=False
-    )
-    
-    user_counts.add_column("Service", style="white")
-    user_counts.add_column("Count", style="yellow")
-    
-    user_counts.add_row(
-        "SSHWS", f"[green]{info['user_counts']['ssh']}[/]"
-    )
-    user_counts.add_row(
-        "VMESS", f"[green]{info['user_counts']['vmess']}[/]"
-    )
-    user_counts.add_row(
-        "VLESS", f"[green]{info['user_counts']['vless']}[/]"
-    )
-    user_counts.add_row(
-        "TROJAN", f"[green]{info['user_counts']['trojan']}[/]"
-    )
-    
-    console.print(user_counts)
-    
-    # Opciones del menú
-    menu_options = Table.grid(padding=(0, 2))
-    menu_options.add_column(style="yellow", width=5)
-    menu_options.add_column(style="white", width=40)
-    menu_options.add_column(style="yellow", width=5)
-    menu_options.add_column(style="white", width=40)
-    
-    menu_options.add_row(
-        "[bold yellow]1[/]", "SSH OPENVPN",
-        "[bold yellow]7[/]", "NOTIBOT"
-    )
-    menu_options.add_row(
-        "[bold yellow]2[/]", "XRAY/VMESS",
-        "[bold yellow]8[/]", "TEMAS"
-    )
-    menu_options.add_row(
-        "[bold yellow]3[/]", "XRAY/VLESS",
-        "[bold yellow]9[/]", "UPDATE"
-    )
-    menu_options.add_row(
-        "[bold yellow]4[/]", "TROJAN",
-        "[bold yellow]10[/]", "SISTEMA"
-    )
-    menu_options.add_row(
-        "[bold yellow]5[/]", "SERVICIOS",
-        "[bold yellow]11[/]", "BACKUP"
-    )
-    menu_options.add_row(
-        "[bold yellow]6[/]", "TELEGRAM BOT",
-        "[bold yellow]12[/]", "REINICIAR"
-    )
-    
-    console.print(menu_options)
-    
-    # Información de versión y expiración
-    cert_days = (datetime.strptime(info['exp2'], "%Y-%m-%d") - datetime.strptime(info['today'], "%Y-%m-%d")).days
-    sts = f"[green](Registered)[/]" if cert_days > 0 else f"[red][EXPIRED][/]"
-    
-    version_info = Table.grid(padding=(0, 2))
-    version_info.add_column(style="white", width=12)
-    version_info.add_column(style="white")
-    
-    version_info.add_row("• Versi", f"{get_file_content('/opt/.ver')} Version")
-    version_info.add_row("• Client", info['author'])
-    version_info.add_row("• Durasi", f"{cert_days} hari")
-    version_info.add_row("• Expiry", f"{info['exp2']} {sts}")
-    
-    console.print(Panel.fit(
-        version_info,
-        border_style="bright_green",
-        title="[bold white]SYSTEM INFO[/]"
-    ))
+    show_main_menu(info)
     
     # Selección de opción
-    opt = input(f" [white]Selecciona una opcion[/] [bright_green]:[/] [white]").strip()
+    opt = input("\n [bright_white]Seleccione una opción:[/] [bright_green]").strip()
     
     # Manejo de opciones
     if opt in ["01", "1"]:
@@ -474,7 +379,10 @@ def menu():
 
 if __name__ == "__main__":
     # Verificar actualizaciones al inicio
-    check_and_update()
+    try:
+        check_and_update()
+    except:
+        pass
     
-    # Iniciar menú principal
+    # Iniciar menú principal xray
     menu()
