@@ -171,8 +171,8 @@ TIMES="10"
     git add . &> /dev/null
     git commit -m m &> /dev/null
     git branch -M main &> /dev/null
-    git remote add origin https://github.com/josecarlosmeza/permission
-    git push -f https://${TOKEN}@github.com/josecarlosmeza/permission.git &> /dev/null
+    git remote add origin https://github.com/darnix1/permission
+    git push -f https://${TOKEN}@github.com/darnix1/permission.git &> /dev/null
     rm -rf /root/ipvps
     clear
     sleep 1
