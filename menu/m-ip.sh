@@ -6,27 +6,7 @@ ipsaya=$(wget -qO- ipinfo.io/ip)
 data_server=$(curl -v --insecure --silent https://google.com/ 2>&1 | grep Date | sed -e 's/< Date: //')
 date_list=$(date +"%Y-%m-%d" -d "$data_server")
 data_ip="https://raw.githubusercontent.com/josecarlosmeza/permission/main/seler"
-checking_sc() {
-  useexp=$(wget -qO- $data_ip | grep $ipsaya | awk '{print $3}')
-  if [[ $date_list < $useexp ]]; then
-    echo -ne
-  else
-    echo -e "\033[1;93m────────────────────────────────────────────\033[0m"
-    echo -e "\033[42m           PANEL ADMIN VVIP                 \033[0m"
-    echo -e "\033[1;93m────────────────────────────────────────────\033[0m"
-    echo -e "            ${RED}DAFTAR DULU DEK !${NC}"
-    echo -e "   \033[0;33mYour VPS${NC} $ipsaya \033[0;33mHas been Banned${NC}"
-    echo -e "     \033[0;33mBuy access permissions for scripts${NC}"
-    echo -e "             \033[0;33mContact Admin :${NC}"
-    echo -e "         \033[0;36mTelegram${NC} t.me/fernandairfan"
-    echo -e "      ${GREEN}WhatsApp${NC} wa.me/+6285172250054"
-    echo -e "\033[1;93m────────────────────────────────────────────\033[0m"
-read -n 1 -s -r -p "  Press any key to back on menu"
-menu
-  fi
-}
-checking_sc
-clear
+
 Repo1="https://raw.githubusercontent.com/josecarlosmeza/permission/main/"
 export MYIP=$( curl -s https://ipinfo.io/ip/ )
 SELLER=$(curl -sS ${Repo1}ip | grep $MYIP | awk '{print $2}')
