@@ -30,9 +30,9 @@ BGX="\033[42m"
 END='\e[0m'
 AKTIF="VERIFIED"
 TOKEN=$(cat /etc/github/api)
-REPO="https://github.com/josecarlosmeza/permission.git"
-EMAIL=$(cat /etc/github/email)
-USER="josecarlosmeza"
+REPO="https://github.com/darnix1/permission.git"
+EMAIL="fdanx@yahoo.com"
+USER="darnix1"
 
 
 add-ip() {
@@ -95,8 +95,8 @@ URL="https://api.telegram.org/bot$KEY/sendMessage"
     git add . &> /dev/null
     git commit -m m &> /dev/null
     git branch -M main &> /dev/null
-    git remote add origin https://github.com/josecarlosmeza/permission
-    git push -f https://${TOKEN}@github.com/josecarlosmeza/permission.git &> /dev/null
+    git remote add origin https://github.com/darnix1/permission
+    git push -f https://${TOKEN}@github.com/darnix1/permission.git &> /dev/null
     rm -rf /root/ipvps
     clear
     sleep 1
@@ -231,8 +231,8 @@ TIMES="10"
     git add . &> /dev/null
     git commit -m m &> /dev/null
     git branch -M main &> /dev/null
-    git remote add origin https://github.com/josecarlosmeza/permission
-    git push -f https://${TOKEN}@github.com/josecarlosmeza/permission.git &> /dev/null
+    git remote add origin https://github.com/darnix1/permission
+    git push -f https://${TOKEN}@github.com/darnix1/permission.git &> /dev/null
     rm -rf /root/ipvps
     clear
     sleep 1
