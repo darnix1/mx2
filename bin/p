@@ -1,49 +1,60 @@
 #!/bin/bash
 
-# Obtener lista única de usuarios (emails)
-emails=($(grep -oP '(?<="email": ")[^"]+' /etc/xray/*.json | sort -u))
+while true; do
+    # Obtener lista única de usuarios (emails)
+    emails=($(grep -oP '(?<="email": ")[^"]+' /etc/xray/*.json | sort -u))
 
-# Mostrar menú de usuarios numerado
-echo -e "══════════════════════════" | lolcat
-echo -e " <= V2RAY USERS LIST =>"
-echo -e "══════════════════════════" | lolcat
+    # Mostrar menú numerado
+    echo -e "══════════════════════════" | lolcat
+    echo -e " <= V2RAY USERS LIST =>"
+    echo -e "══════════════════════════" | lolcat
 
-for i in "${!emails[@]}"; do
-    printf "%3d) %s\n" $((i+1)) "${emails[$i]}"
+    for i in "${!emails[@]}"; do
+        printf "%3d) %s\n" $((i+1)) "${emails[$i]}"
+    done
+
+    echo -e "══════════════════════════" | lolcat
+
+    # Leer opción
+    read -p "Select user number to change UUID: " selection
+    user="${emails[$((selection-1))]}"
+
+    # Validación
+    if [ -z "$user" ]; then
+        echo "Invalid selection. Try again."
+        continue
+    fi
+
+    # Obtener UUID actual
+    current_uuid=$(grep -A 2 "\"email\": \"$user\"" /etc/xray/*.json | grep -oP '(?<="id": ")[^"]+')
+
+    # Limpiar pantalla
+    clear
+    last_six=${current_uuid: -6}
+    echo -e "User selected: $user"
+    echo -e "Current UUID ends with: ...${last_six}"
+    echo
+
+    # Confirmar si es correcto
+    read -p "Is this the correct UUID for the user? (y/n): " confirm
+    if [[ "$confirm" =~ ^[Yy]$ ]]; then
+        read -p "Enter new UUID: " uuid
+        sed -i -E "/\"email\": \"$user\"/,/}/s/\"id\": \"[^\"]+\"/\"id\": \"$uuid\"/" /etc/xray/*.json
+
+        systemctl daemon-reload
+        systemctl restart xray
+
+        clear
+        echo -e "══════════════════════════" | lolcat
+        echo -e " <= SUCCESSFULLY CHANGED UUID =>"
+        echo -e "══════════════════════════" | lolcat
+        echo -e "USER (EMAIL): $user"
+        echo -e "NEW UUID: $uuid"
+        echo -e "══════════════════════════" | lolcat
+        break
+    else
+        clear
+        echo "Returning to menu..."
+        sleep 1
+    fi
 done
-
-echo -e "══════════════════════════" | lolcat
-
-# Leer opción de usuario
-read -p "Select user number to change UUID: " selection
-user="${emails[$((selection-1))]}"
-
-# Verifica si la selección es válida
-if [ -z "$user" ]; then
-    echo "Invalid selection. Exiting."
-    exit 1
-fi
-
-# Mostrar UUID actual
-current_uuid=$(grep -A 2 "\"email\": \"$user\"" /etc/xray/*.json | grep -oP '(?<="id": ")[^"]+')
-echo -e "\nCurrent UUID for $user: $current_uuid"
-
-# Leer nuevo UUID
-read -p "Input New UUID: " uuid
-
-# Cambiar UUID
-sed -i -E "/\"email\": \"$user\"/,/}/s/\"id\": \"[^\"]+\"/\"id\": \"$uuid\"/" /etc/xray/*.json
-
-# Reiniciar servicio
-systemctl daemon-reload
-systemctl restart xray
-
-# Confirmación
-clear
-echo -e "══════════════════════════" | lolcat
-echo -e " <= SUCCESSFULLY CHANGED UUID =>"
-echo -e "══════════════════════════" | lolcat
-echo -e "USER (EMAIL): $user"
-echo -e "OLD UUID: $current_uuid"
-echo -e "NEW UUID: $uuid"
-echo -e "══════════════════════════" | lolcat
