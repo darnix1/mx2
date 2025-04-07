@@ -1,31 +1,34 @@
 #!/bin/bash
-
+clear
 # Obtener lista única de usuarios (emails)
 emails=($(grep -oP '(?<="email": ")[^"]+' /etc/xray/*.json | sort -u))
 
 # Mostrar menú de usuarios numerado
-echo -e "══════════════════════════" | lolcat
-echo -e " <= V2RAY USERS LIST =>"
-echo -e "══════════════════════════" | lolcat
 
+title
+amacen " CAMBIAR UUID USUARIOS VMESS"
+msg -bar
+gris " Cambiar el uuid constantemente"
+gris " puede inhabilitar el servicio XRAY"
+#gris " Si el el caso favor de buscar el fix xray"
+msg -bar
 for i in "${!emails[@]}"; do
     printf "%3d) %s\n" $((i+1)) "${emails[$i]}"
 done
 
-echo -e "══════════════════════════" | lolcat
-
+msg -bar
 # Leer opción de usuario
-read -p "Select user number to change UUID: " selection
+read -p "Seleccione el usuario: " selection
 user="${emails[$((selection-1))]}"
 
 # Verifica si la selección es válida
 if [ -z "$user" ]; then
-    echo "Invalid selection. Exiting."
+    echo "Selección no válida. Saliendo.."
     exit 1
 fi
 
 # Leer nuevo UUID (sin mostrar el anterior)
-read -p "Input New UUID for $user: " uuid
+read -p "Nuevo UUID para $user: " uuid
 
 # Cambiar UUID
 sed -i -E "/\"email\": \"$user\"/,/}/s/\"id\": \"[^\"]+\"/\"id\": \"$uuid\"/" /etc/xray/*.json
@@ -36,9 +39,9 @@ systemctl restart xray
 
 # Confirmación
 clear
-echo -e "══════════════════════════" | lolcat
-echo -e " <= SUCCESSFULLY CHANGED UUID =>"
-echo -e "══════════════════════════" | lolcat
-echo -e "USER : $user"
-echo -e "NEW UUID: $uuid"
-echo -e "══════════════════════════" | lolcat
+title
+dnxver " CAMBIO UUID VMESS EXITOSO"
+msg -bar
+green "USUARIO : $user"
+green "NUEVO UUID: $uuid"
+msg -bar
