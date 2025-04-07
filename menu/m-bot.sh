@@ -18,7 +18,7 @@ apt install python3-pip
 sudo apt-get install -y p7zip-full
 cd /usr/bin/
 clear
-wget https://raw.githubusercontent.com/josecarlosmeza/autoscript-vip/main/bot/bot.zip
+wget https://raw.githubusercontent.com/darnix1/mx2/main/bot/bot.zip
 unzip bot.zip &>/dev/null
 mv bot/* /usr/bin/*
 chmod +x /usr/bin/*
@@ -26,7 +26,7 @@ rm -rf bot.zip
 clear
 mkdir -p /usr/bin/kyt/
 cd /usr/bin/kyt/
-wget https://raw.githubusercontent.com/josecarlosmeza/autoscript-vip/main/bot/kyt.zip
+wget https://raw.githubusercontent.com/darnix1/mx2/main/bot/kyt.zip
 unzip kyt.zip &>/dev/null
 cd /usr/bin/
 pip3 install -r kyt/requirements.txt
@@ -136,14 +136,14 @@ echo -e "$COLOR1╭════════════════════�
 echo -e "$COLOR1│ \033[1;37mPlease select a your Choice              $COLOR1│${NC}"
 echo -e "$COLOR1╰══════════════════════════════════════════╯${NC}"
 echo -e "$COLOR1╭══════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│  [ 1 ]  \033[1;37mGANTI BOT       ${NC}"
-echo -e "$COLOR1│  [ 2 ]  \033[1;37mUPDATE BOT     ${NC}"
-echo -e "$COLOR1│  [ 3 ]  \033[1;37mDELETE BOT     ${NC}"
-echo -e "$COLOR1│  [ 4 ]  \033[1;37mGANTI NAMA PANGGILAN BOT (MULTI SERVER)     ${NC}"
-echo -e "$COLOR1│  [ 5 ]  \033[1;37mTAMBAH ADMIN     ${NC}"
+echo -e "$COLOR1│  [ 1 ]  \033[1;37mCAMBIAR BOT       ${NC}"
+echo -e "$COLOR1│  [ 2 ]  \033[1;37mACTUALIZAR BOT     ${NC}"
+echo -e "$COLOR1│  [ 3 ]  \033[1;37mELIMINAR BOT     ${NC}"
+echo -e "$COLOR1│  [ 4 ]  \033[1;37mCAMBIAR APODO BOT (MULTI SERVER)     ${NC}"
+echo -e "$COLOR1│  [ 5 ]  \033[1;37mAGREGAR ADMINISTRADOR     ${NC}"
 echo -e "$COLOR1╰══════════════════════════════════════════╯${NC}"
 until [[ $domain2 =~ ^[1-5]+$ ]]; do 
-read -p "   Please select numbers 1 sampai 5 : " domain2
+read -p "   Por favor seleccione los números 1 al 5 : " domain2
 done
 
 if [[ $domain2 == "1" ]]; then
@@ -205,13 +205,13 @@ rm -rf /usr/bin/kyt.zip
 rm -rf /usr/bin/kyt
 sleep 2
 cd /usr/bin
-wget https://raw.githubusercontent.com/josecarlosmeza/autoscript-vip/main/bot/bot.zip
+wget https://raw.githubusercontent.com/darnix1/mx2/main/bot/bot.zip
 unzip bot.zip
 mv bot/* /usr/bin
 chmod +x /usr/bin/*
 rm -rf bot.zip
 clear
-wget https://raw.githubusercontent.com/josecarlosmeza/autoscript-vip/main/bot/kyt.zip
+wget https://raw.githubusercontent.com/darnix1/mx2/main/bot/kyt.zip
 unzip kyt.zip
 cd kyt
 pip3 install -r kyt/requirements.txt
@@ -250,11 +250,11 @@ echo -e "$COLOR1╭════════════════════�
 echo -e "$COLOR1 ${NC} ${COLBG1}                ${WH}• BOT PANEL •                  ${NC} $COLOR1 $NC"
 echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
 echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo -e "${grenbo}Ini digunakan jika Mau memakai 1bot saja tanpa perlu ${NC}"
-echo -e "${grenbo}memakai banyak bot create ini digunakan untuk create akun ${NC}"
+echo -e "${grenbo}Esto se utiliza si desea utilizar solo 1 bot sin necesidad de ${NC}"
+echo -e "${grenbo}Usando muchos bots, esto se usa para crear cuentas. ${NC}"
 echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
 echo -e ""
-read -e -p "[*] Input Nama Panggilan Botnya : " namabot
+read -e -p "[*] Ingrese el apodo del bot : " namabot
 
 sed -i "s/77/${namabot}/g" /usr/bin/kyt/modules/menu.py
 sed -i "s/77/${namabot}/g" /usr/bin/kyt/modules/start.py
