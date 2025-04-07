@@ -5,9 +5,9 @@ biji=`date +"%Y-%m-%d" -d "$dateFromServer"`
 ipsaya=$(wget -qO- ipinfo.io/ip)
 data_server=$(curl -v --insecure --silent https://google.com/ 2>&1 | grep Date | sed -e 's/< Date: //')
 date_list=$(date +"%Y-%m-%d" -d "$data_server")
-data_ip="https://raw.githubusercontent.com/josecarlosmeza/permission/main/seler"
+data_ip="https://raw.githubusercontent.com/darnix1/permission/main/seler"
 
-Repo1="https://raw.githubusercontent.com/josecarlosmeza/permission/main/"
+Repo1="https://raw.githubusercontent.com/darnix1/permission/main/"
 export MYIP=$( curl -s https://ipinfo.io/ip/ )
 SELLER=$(curl -sS ${Repo1}ip | grep $MYIP | awk '{print $2}')
 Exp100=$(curl -sS ${Repo1}ip | grep $MYIP | awk '{print $3}')
