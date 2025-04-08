@@ -19,16 +19,23 @@ def tim2sec(time_str):
         seconds += part * (60 ** i)
     return seconds
 
-# Función convert (conversión de bytes a KB, MB, GB)
+# Nueva función convert con soporte para decimales y más unidades
 def convert(bytes):
-    if bytes < 1024:
-        return f"{bytes} B"
-    elif bytes < 1048576:
-        return f"{(bytes + 1023) // 1024} KB"
-    elif bytes < 1073741824:
-        return f"{(bytes + 1048575) // 1048576} MB"
+    suffixes = ["B", "KB", "MB", "GB", "TB", "PB"]
+    i = 0
+    d = 0  # Para el decimal
+    
+    # Convertir a la unidad adecuada
+    while bytes >= 1024 and i < len(suffixes)-1:
+        d = (bytes % 1024) * 10 // 1024  # Calcula 1 decimal (0-9)
+        bytes = bytes // 1024
+        i += 1
+    
+    # Mostrar resultado con/sin decimal según sea necesario
+    if d > 0 and i > 0:
+        return f"{bytes}.{d} {suffixes[i]}"  # Ej: 1.8 GB
     else:
-        return f"{(bytes + 1073741823) // 1073741824} GB"
+        return f"{bytes} {suffixes[i]}"      # Ej: 2 GB (sin .0)
 
 # Función cek_vmess (verificación de usuarios VMESS activos)
 def cek_vmess():
