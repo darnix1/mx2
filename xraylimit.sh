@@ -233,9 +233,9 @@ if [[ -e $HOME/lista-arq ]] && [[ ! $(cat $HOME/lista-arq|grep "KEY INVALIDA!") 
    sleep 1s
    msg -bar2
    listaarqs="$(locate "lista-arq"|head -1)" && [[ -e ${listaarqs} ]] && rm $listaarqs   
-   cat /etc/bash.bashrc|grep -v '[[ $UID != 0 ]] && TMOUT=15 && export TMOUT' > /etc/bash.bashrc.2
-   echo -e '[[ $UID != 0 ]] && TMOUT=15 && export TMOUT' >> /etc/bash.bashrc.2
-   mv -f /etc/bash.bashrc.2 /etc/bash.bashrc
+   #cat /etc/bash.bashrc|grep -v '[[ $UID != 0 ]] && TMOUT=15 && export TMOUT' > /etc/bash.bashrc.2
+   #echo -e '[[ $UID != 0 ]] && TMOUT=15 && export TMOUT' >> /etc/bash.bashrc.2
+   #mv -f /etc/bash.bashrc.2 /etc/bash.bashrc
    #echo "${SCPdir}/menu" > /usr/bin/menu && chmod +x /usr/bin/menu
    #echo "${SCPdir}/menu" > /usr/bin/adm && chmod +x /usr/bin/adm
    inst_components
