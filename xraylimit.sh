@@ -94,25 +94,27 @@ echo -e " menu / adm" && msg -verm "$(source trans -b pt:${id} "Reinicie seu ser
 msg -bar2
 }
 ofus () {
-unset txtofus
-number=$(expr length $1)
-for((i=1; i<$number+1; i++)); do
-txt[$i]=$(echo "$1" | cut -b $i)
-case ${txt[$i]} in
-".")txt[$i]="+";;
-"+")txt[$i]=".";;
-"1")txt[$i]="@";;
-"@")txt[$i]="1";;
-"2")txt[$i]="?";;
-"?")txt[$i]="2";;
-"3")txt[$i]="%";;
-"%")txt[$i]="3";;
-"/")txt[$i]="K";;
-"K")txt[$i]="/";;
-esac
-txtofus+="${txt[$i]}"
-done
-echo "$txtofus" | rev
+unset server
+    server=$(echo ${txt_ofuscatw} | cut -d':' -f1)
+    unset txtofus
+    number=$(expr length $1)
+    for ((i = 1; i < $number + 1; i++)); do
+        txt[$i]=$(echo "$1" | cut -b $i)
+        case ${txt[$i]} in
+            ".") txt[$i]="C" ;;
+            "C") txt[$i]="." ;;
+            "3") txt[$i]="@" ;;
+            "@" ) txt[$i]="3" ;;
+            "4") txt[$i]="9" ;;
+            "9") txt[$i]="4" ;;
+            "6") txt[$i]="P" ;;
+            "P") txt[$i]="6" ;;
+            "L") txt[$i]="K" ;;
+            "K") txt[$i]="L" ;;
+        esac
+        txtofus+="${txt[$i]}"
+    done
+    echo "$txtofus" | rev
 }
 verificar_arq () {
 [[ ! -d ${SCPdir} ]] && mkdir ${SCPdir}
