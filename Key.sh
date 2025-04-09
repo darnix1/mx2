@@ -246,3 +246,30 @@ if [[ -e $HOME/lista-arq ]] && [[ ! $(cat $HOME/lista-arq|grep "KEY INVALIDA!") 
 else
 invalid_key
 fi
+
+
+
+# // color
+grs="\033[1;93m"
+bg="\033[42m"
+gr="\e[92;1m"
+NC='\033[0m'
+clear
+
+# // Banner
+echo -e ""
+echo -e "\e[38;5;239m════════════════════════════════════════════════════"
+echo -e "         \033[45m \033[103m \033[107m\033[30m SCRIPT DARNIX OPTIMIZADO \033[103m \033[45m \e[0m"
+echo -e ""
+echo -e "\033[38;5;239m═════════════════\e[48;5;1m\e[38;5;230m  INSTALADOR  \e[0m\e[38;5;239m════════════════════"
+echo -e ""
+echo -e "        ${gr} SCRIPT BY DARNIX ${NC}"
+echo -e "   ${grs}───────────────────────────────────────────${NC}"
+echo -e ""
+while true; do
+    read -rp " Introduce tu nombre (sin espacios): " buyer
+    [[ -n "$buyer" ]] && break
+done
+sleep 2
+MYIP=$(wget -qO- ipinfo.io/ip);
+clear
