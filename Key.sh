@@ -151,53 +151,44 @@ clear&&clear
 
 
 
-invalid_key() {
-    [[ -e $HOME/lista-arq ]] && list_fix="$(cat < $HOME/lista-arq)" || list_fix=''
-    
-    if [[ "$list_fix" = "KEY INVALIDA!" ]]; then
-        IiP="$(ofus "$Key" | grep -vE '127\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | grep -o -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')"
-        cheklist="$(curl -sSL $IiP:81/dani/checkIP.log)"
-        chekIP="$(echo -e "$cheklist" | grep ${Key} | awk '{print $3}')"
-        chekDATE="$(echo -e "$cheklist" | grep ${Key} | awk '{print $7}')"
-        
-        msg -bar3
-        echo ""
-        
-        if [[ ! -z ${chekIP} ]]; then 
-            varIP=$(echo ${chekIP}| sed 's/[1-5]/X/g')
-            dnxroj "KEY DETECTA EN LA BASE DE DATOS @botgenmx_bot"
-            echo -e ""
-            msg -verm "USADA IP : ${varIP} \n FECHA : ${chekDATE} ! "
-            echo ""
-            msg -bar3
-            read -p "  Responde [ s | n ] : " -e -i "s" x
-            
-            if [[ $x = @(s|S|y|Y) ]]; then
-                validar_key  # Llamamos a la función en lugar del script externo
-            else
-                exit 1
-            fi
-        else
-            echo -e "    PRUEBA COPIAR BIEN TU KEY "
-            [[ $(echo "$(ofus "$Key"|cut -d'/' -f2)" | wc -c ) = 18 ]] && echo -e "" || echo -e "\033[1;31m CONTENIDO DE LA KEY ES INCORRECTO"
-            echo -e "   KEY NO COINCIDE CON EL CODEX DEL ADM "
-            msg -bar3
-            tput cuu1 && tput dl1
-        fi
-    fi
-    
-    msg -bar2 && msg -verm "KEY NO VALIDA! " && msg -bar2
-    [[ -e $HOME/lista-arq ]] && rm $HOME/lista-arq
-    dnxroj "KEY RECHAZADA POR EL GENERADOR @botgenmx_bot"
-    echo -ne "\033[0;32m "
-    read -p "  Responde [ s | n ] : " -e -i "s" x
-    
-    if [[ $x = @(s|S|y|Y) ]]; then
-        validar_key  # Llamamos a la función en lugar del script externo
-    else
-        exit 1
-    fi
+invalid_key () {
+[[ -e $HOME/lista-arq ]] && list_fix="$(cat < $HOME/lista-arq)" || list_fix=''
+[[ "$list_fix" = "KEY INVALIDA!" ]] && {
+IiP="$(ofus "$Key" | grep -vE '127\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | grep -o -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')"
+cheklist="$(curl -sSL $IiP:81/dani/checkIP.log)"
+chekIP="$(echo -e "$cheklist" | grep ${Key} | awk '{print $3}')"
+chekDATE="$(echo -e "$cheklist" | grep ${Key} | awk '{print $7}')"
+msg -bar3
+echo ""
+[[ ! -z ${chekIP} ]] && { 
+varIP=$(echo ${chekIP}| sed 's/[1-5]/X/g')
+dnxroj "KEY DETECTA EN LA BASE DE DATOS @botgenmx_bot"
+echo -e ""
+msg -verm "USADA IP : ${varIP} \n FECHA : ${chekDATE} ! "
+echo ""
+msg -bar3
+read -p "  Responde [ s | n ] : " -e -i "s" x
+[[ $x = @(s|S|y|Y) ]] && validar_key || {
+exit&&exit
 }
+} || {
+echo -e "    PRUEBA COPIAR BIEN TU KEY "
+[[ $(echo "$(ofus "$Key"|cut -d'/' -f2)" | wc -c ) = 18 ]] && echo -e "" || echo -e "\033[1;31m CONTENIDO DE LA KEY ES INCORRECTO"
+echo -e "   KEY NO COINCIDE CON EL CODEX DEL ADM "
+msg -bar3
+tput cuu1 && tput dl1
+}
+}
+msg -bar2 && msg -verm "KEY NO VALIDA! " && msg -bar2
+[[ -e $HOME/lista-arq ]] && rm $HOME/lista-arq
+dnxroj "KEY RECHAZADA POR EL GENERADOR @botgenmx_bot"
+echo -ne "\033[0;32m "
+read -p "  Responde [ s | n ] : " -e -i "s" x
+[[ $x = @(s|S|y|Y) ]] && validar_key || {
+exit&&exit
+}
+}
+
 
 
 validar_key() {
