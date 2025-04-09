@@ -195,57 +195,60 @@ exit&&exit
 }
 
 
-while [[ ! $Key ]]; do
-msg -bar2
-figlet ' -DARNIX- ' | boxes -d stone -p a0v0 | lolcat
-msg -bar2
-msg -ne "KEY: " && read Key
-tput cuu1 && tput dl1
-done
-msg -ne "CHECKEY: "
-cd $HOME
-wget -O $HOME/lista-arq $(ofus "$Key")/$IP > /dev/null 2>&1 && echo -e "\033[1;32m Verified" || {
-   echo -e "\033[1;32m Verified"
-   invalid_key
-   exit
-   }
-IP=$(ofus "$Key" | grep -vE '127\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | grep -o -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}') && echo "$IP" > /usr/bin/vendor_code
-sleep 1s
-updatedb
-if [[ -e $HOME/lista-arq ]] && [[ ! $(cat $HOME/lista-arq|grep "KEY INVALIDA!") ]]; then
-   msg -bar2
-   #msg -ama "$(source trans -b pt:${id} "BEM VINDO, OBRIGADO POR UTILIZAR"|sed -e 's/[^a-z -]//ig'): \033[1;31m[NEW-ULTIMATE]"
-   dnxver " TU IP SE ENLAZO EXITOSAMENTE AL BOT "
-   
-   REQUEST=$(ofus "$Key"|cut -d'/' -f2)
-   [[ ! -d ${SCPinstal} ]] && mkdir ${SCPinstal}
-    pontos="."
-    stopping="📍"
-    colors=("\033[31m" "\033[32m" "\033[33m" "\033[34m" "\033[35m" "\033[36m")  # Red, Green, Yellow, Blue, Magenta, Cyan
-   reset_color="\033[0m"
-   for arqx in $(cat $HOME/lista-arq); do
-    color_index=$(( ${#pontos} % ${#colors[@]} ))
-    msg -verm "${stopping}${colors[$color_index]}${pontos}${reset_color}"
-    wget -O ${SCPinstal}/${arqx} ${IP}:81/${REQUEST}/${arqx} > /dev/null 2>&1 && verificar_arq "${arqx}" || error_fun
-    tput cuu1 && tput dl1
-    pontos+="."
+validar_key() {
+    while [[ ! $Key ]]; do
+        msg -bar2
+        figlet ' -DARNIX- ' | boxes -d stone -p a0v0 | lolcat
+        msg -bar2
+        msg -ne "KEY: " && read Key
+        tput cuu1 && tput dl1
     done
-   sleep 1s
-   msg -bar2
-   listaarqs="$(locate "lista-arq"|head -1)" && [[ -e ${listaarqs} ]] && rm $listaarqs   
-   #cat /etc/bash.bashrc|grep -v '[[ $UID != 0 ]] && TMOUT=15 && export TMOUT' > /etc/bash.bashrc.2
-   #echo -e '[[ $UID != 0 ]] && TMOUT=15 && export TMOUT' >> /etc/bash.bashrc.2
-   #mv -f /etc/bash.bashrc.2 /etc/bash.bashrc
-   #echo "${SCPdir}/menu" > /usr/bin/menu && chmod +x /usr/bin/menu
-   #echo "${SCPdir}/menu" > /usr/bin/adm && chmod +x /usr/bin/adm
-   inst_components
-   echo "$Key" > ${SCPdirn}/key.txt
-   [[ -d ${SCPinstal} ]] && rm -rf ${SCPinstal}   
-   [[ ${#id} -gt 2 ]] && echo "pt" > ${SCPidioma} || echo "${id}" > ${SCPidioma}
-   [[ ${byinst} = "true" ]] && install_fim
-else
-invalid_key
-fi
+
+    msg -ne "CHECKEY: "
+    cd $HOME
+    wget -O $HOME/lista-arq $(ofus "$Key")/$IP > /dev/null 2>&1 && echo -e "\033[1;32m Verified" || {
+        echo -e "\033[1;32m Verified"
+        invalid_key
+        exit
+    }
+    
+    IP=$(ofus "$Key" | grep -vE '127\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | grep -o -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}') && echo "$IP" > /usr/bin/vendor_code
+    sleep 1s
+    updatedb
+    
+    if [[ -e $HOME/lista-arq ]] && [[ ! $(cat $HOME/lista-arq|grep "KEY INVALIDA!") ]]; then
+        msg -bar2
+        dnxver " TU IP SE ENLAZO EXITOSAMENTE AL BOT "
+        
+        REQUEST=$(ofus "$Key"|cut -d'/' -f2)
+        [[ ! -d ${SCPinstal} ]] && mkdir ${SCPinstal}
+        pontos="."
+        stopping="📍"
+        colors=("\033[31m" "\033[32m" "\033[33m" "\033[34m" "\033[35m" "\033[36m")  # Red, Green, Yellow, Blue, Magenta, Cyan
+        reset_color="\033[0m"
+        
+        for arqx in $(cat $HOME/lista-arq); do
+            color_index=$(( ${#pontos} % ${#colors[@]} ))
+            msg -verm "${stopping}${colors[$color_index]}${pontos}${reset_color}"
+            wget -O ${SCPinstal}/${arqx} ${IP}:81/${REQUEST}/${arqx} > /dev/null 2>&1 && verificar_arq "${arqx}" || error_fun
+            tput cuu1 && tput dl1
+            pontos+="."
+        done
+        
+        sleep 1s
+        msg -bar2
+        listaarqs="$(locate "lista-arq"|head -1)" && [[ -e ${listaarqs} ]] && rm $listaarqs   
+        inst_components
+        echo "$Key" > ${SCPdirn}/key.txt
+        [[ -d ${SCPinstal} ]] && rm -rf ${SCPinstal}   
+        [[ ${#id} -gt 2 ]] && echo "pt" > ${SCPidioma} || echo "${id}" > ${SCPidioma}
+        [[ ${byinst} = "true" ]] && install_fim
+    else
+        invalid_key
+    fi
+}
+
+# Luego puedes llamar a la función cuando la necesites:
 
 
 
