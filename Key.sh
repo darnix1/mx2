@@ -173,8 +173,7 @@ msg -verm "USADA IP : ${varIP} \n FECHA : ${chekDATE} ! "
 echo ""
 msg -bar3
 read -p "  Responde [ s | n ] : " -e -i "s" x
-#[[ $x = @(s|S|y|Y) ]] && bash <(wget -qO- https://raw.githubusercontent.com/darnix1/vip/main/backup/xd) || {
-[[ "$Key" == "S" || "$Key" == "s" ]] && Key="" && clear && continue
+[[ $x = @(s|S|y|Y) ]] && bash <(wget -qO- https://raw.githubusercontent.com/darnix1/vip/main/backup/xd) || {
 exit&&exit
 }
 } || {
@@ -190,8 +189,7 @@ msg -bar2 && msg -verm "KEY NO VALIDA! " && msg -bar2
 dnxroj "KEY RECHAZADA POR EL GENERADOR @botgenmx_bot"
 echo -ne "\033[0;32m "
 read -p "  Responde [ s | n ] : " -e -i "s" x
-#[[ $x = @(s|S|y|Y) ]] && bash <(wget -qO- https://raw.githubusercontent.com/darnix1/vip/main/backup/xd) || {
-[[ "$Key" == "S" || "$Key" == "s" ]] && Key="" && clear && continue
+[[ $x = @(s|S|y|Y) ]] && bash <(wget -qO- https://raw.githubusercontent.com/darnix1/vip/main/backup/xd) || {
 exit&&exit
 }
 }
